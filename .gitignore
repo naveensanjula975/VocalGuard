@@ -1,0 +1,10 @@
+Node.js
+node_modules/
+build/
+
+Environment variables
+.env
+
+.github/workflows/google-cloud-run.yml
+.github/workflows/firebase-hosting.yml
+Dockerfile
