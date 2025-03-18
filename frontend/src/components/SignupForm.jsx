@@ -37,9 +37,7 @@ export default function SignupForm() {
           <button type="submit">SIGNUP</button>
         </form>
 
-        <div className="forgot-password">
-          <a href="#">Forgot your password?</a>
-        </div>
+
 
         <div className="signup-wrapper">
           <div className="signup-container">
