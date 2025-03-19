@@ -1,0 +1,38 @@
+* {
+  padding: 5px 25px;
+  box-sizing: border-box;
+}
+
+.navbar{
+  margin-top: 30px;
+  margin-right: 110px;
+}
+.head {
+position: fixed;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  font-size: larger;
+  text-decoration: solid;
+}
+
+a {
+  font-family: calibri;
+  text-decoration: none;
+  color: black;
+}
+
+a:hover {
+  background-color: rgb(230, 230, 230);
+  border-radius: 20px;
+}
+.line {
+  font-weight: bold;
+}
+
+.logo {
+ margin-top: -60px;
+  width: 350px;
+  height: 250px;
+  margin-left: -110px;
+}
