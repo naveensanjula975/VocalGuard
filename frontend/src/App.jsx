@@ -5,17 +5,16 @@ import {
   Route,
   Navigate,
 } from "react-router-dom";
-import LoginPage from "./pages/LoginPage";
 import HomePage from "./pages/HomePage";
-import "./styles/styles.css";
+
+import ResaultPage from "./pages/ResultPage";
 
 const App = () => {
   return (
     <Router>
       <Routes>
         <Route path="/" element={<HomePage />} />
-        <Route path="/login" element={<LoginPage />} />
-        {/* Redirect any unknown routes to home */}
+        <Route path="/result" element={<ResaultPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
