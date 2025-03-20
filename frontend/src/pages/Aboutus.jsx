@@ -1,49 +1,27 @@
-import React from "react";
-import "../styles/Aboutus.css"; // Import CSS file
-import voiceRecognition from "../assets/voice-recognition.jpg"; // Image from public folder
+import React from 'react';
+import '../styles/AboutUs.css';
+import voiceRecognitionImage from '../assets/voice-recognition.svg';
 
-const App = () => {
+const AboutUs = () => {
   return (
-    <div className="container">
-      {/* Navbar */}
-      <nav className="navbar">
-        <div className="logo">VOCAL Guard</div>
-        <div className="nav-links">
-          <a href="#">Home</a>
-          <a href="#">About us</a>
-          <a href="#">History</a>
+    <div className="about-container">
+      <h1 className="about-title">About Us</h1>
+      <div className="about-content">
+        <div className="image-container">
+          <img src={voiceRecognitionImage} alt="Voice Recognition" className="voice-recognition-image" />
+          <div className="voice-recognition-text">VOICE RECOGNITION</div>
         </div>
-      </nav>
-
-      {/* About Us Section */}
-      <section className="about">
-        <h2>About Us</h2>
-
-        <div className="content">
-          {/* Image Card */}
-          <div className="image-card">
-            <img src={voiceRecognition} alt="Voice Recognition" />
-          
-          </div>
-
-          {/* Text Content */}
-          <div className="text-box">
-            <p>
-              <strong>VocalGuard</strong> is an advanced AI-driven web
-              application designed to detect deepfake audio with precision and
-              efficiency. By leveraging state-of-the-art machine learning
-              algorithms, our platform ensures the authenticity of digital audio
-              content, protecting users from misinformation and fraud.
-            </p>
-            <p>
-              Committed to innovation and security, VocalGuard provides a
-              reliable solution for safeguarding digital communications.
-            </p>
-          </div>
+        <div className="text-container">
+          <p>
+            VocalGuard is an advanced AI-driven web application designed to detect deepfake audio with precision and efficiency. 
+            By leveraging state-of-the-art machine learning algorithms, our platform ensures the authenticity of digital audio content, 
+            protecting users from misinformation and fraud. Committed to innovation and security, VocalGuard provides a reliable solution 
+            for safeguarding digital communications.
+          </p>
         </div>
-      </section>
+      </div>
     </div>
   );
 };
 
-export default App;
+export default AboutUs;
