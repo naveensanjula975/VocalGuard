@@ -5,10 +5,10 @@
 
 .navbar{
   margin-top: 30px;
-  margin-right: 110px;
+  margin-right: 150px;
 }
 .head {
-position: fixed;
+position:fixed;
   width: 100%;
   display: flex;
   justify-content: space-between;
@@ -34,5 +34,5 @@ a:hover {
  margin-top: -60px;
   width: 350px;
   height: 250px;
-  margin-left: -110px;
+  margin-left: -140px;
 }
