@@ -130,3 +130,40 @@ body {
   font-weight: bolder;
   font-style: italic;
 }
+
+.mainresult{
+  width: 1350px;
+  height: 25px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  margin-top: 60px;
+  padding-left: -50px;
+ 
+}
+
+ 
+h4{
+  font-style: italic;
+  margin-left: 10px;
+  font-weight: lighter;
+}
+.res2{
+  width: 50px;
+  height: 25px;
+  margin-right: 150px;
+  background-color: rgb(75, 75, 108);
+  font-weight: bolder;
+  font-style: italic;
+  
+}
+
+.res4{
+  width: 50px;
+  height: 25px;
+  background-color: rgb(119, 255, 0);
+  font-weight: bolder;
+  font-style: italic;
+  margin-right: 130px;
+}
