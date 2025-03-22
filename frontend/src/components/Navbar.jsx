@@ -1,7 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import '../styles/Navbar.css';
-import logo from '../assets/voice-recognition.svg';
+import logo from '../assets/logo.png';
+
 
 const Navbar = () => {
   return (
@@ -9,8 +10,6 @@ const Navbar = () => {
       <div className="nav-container">
         <Link to="/" className="nav-logo">
           <img src={logo} alt="VocalGuard" />
-          <span>VOCAL</span>
-          <span className="guard">Guard</span>
         </Link>
         
         <div className="nav-links">

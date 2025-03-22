@@ -1,5 +1,5 @@
 import React from 'react';
-import '../styles/AboutUs.css';
+import '../styles/AboutPage.css';
 import voiceRecognitionImage from '../assets/voice-recognition.svg';
 
 const AboutUs = () => {
