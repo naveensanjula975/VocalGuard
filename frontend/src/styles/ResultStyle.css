@@ -1,5 +1,5 @@
 body {
-  height: 200vh;
+  height: 0vh;
 }
 
 .head-text {
@@ -166,4 +166,34 @@ h4{
   font-weight: bolder;
   font-style: italic;
   margin-right: 130px;
+}
+
+.but{
+  display: flex;
+  flex-direction: row;
+  margin-top: 50px;
+  align-items: center;
+  justify-content: center;
+  
+}
+
+.but1{
+  width: 150px;
+  height: 40px;
+  background-color: pink;
+ border-radius: 15px;
+}
+.but2{
+  width: 150px;
+  height: 40px;
+  background-color: pink;
+  margin-left: 200px;
+  border-radius: 15px;
+}
+.but3{
+  width: 150px;
+  height: 40px;
+  background-color: pink;
+  margin-left: 200px;
+  border-radius: 15px;
 }
