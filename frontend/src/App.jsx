@@ -1,16 +1,5 @@
 import React from "react";
-import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
-  Navigate,
-} from "react-router-dom";
-import LoginPage from "./pages/LoginPage";
-import HomePage from "./pages/HomePage";
-import AboutUsPage from "./pages/AboutUs";
-import Navbar from "./components/Navbar";
-import "./styles/styles.css";
-import "./App.css";
+import LoginForm from "./components/LoginForm"; // Import the LoginForm component
 
 const App = () => {
   return (
@@ -30,4 +19,4 @@ const App = () => {
   );
 };
 
-export default App;
+export default App; // Export default to use in main.jsx
