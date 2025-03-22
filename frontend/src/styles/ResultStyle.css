@@ -1,5 +1,10 @@
 body {
-  height: 0vh;
+  height: 150vh;
+}
+
+.cont{
+  margin-left: 120px;
+  margin-top:-65px;
 }
 
 .head-text {
