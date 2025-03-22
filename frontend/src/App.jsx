@@ -9,22 +9,26 @@ import {
 import LoginPage from "./pages/LoginPage";
 import HomePage from "./pages/HomePage";
 import AboutUsPage from "./pages/AboutPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import Navbar from "./components/Navbar";
 import "./styles/styles.css";
 import "./App.css";
 
 const AppContent = () => {
   const location = useLocation();
-  const isLoginPage = location.pathname === "/login";
+  const isAuthPage = ["/login", "/forgot-password", "/signup"].includes(
+    location.pathname
+  );
 
   return (
     <div className="app">
-      {!isLoginPage && <Navbar />}
+      {!isAuthPage && <Navbar />}
       <main className="main-content">
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/about" element={<AboutUsPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
