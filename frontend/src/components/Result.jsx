@@ -34,13 +34,16 @@ export default function Result() {
       </div>
 
       <div className="mainresult">
-        
         <h4>Original :</h4>
-        <div className="res2"></div>
+        <div className="res2">80%</div>
         <h4>AI :</h4>
-        <div className="res4"></div>
+        <div className="res4">20%</div>
       </div>
-
+      <div className="but">
+        <button className="but1">Check History</button>
+        <button className="but2">Download Report</button>
+        <button className="but3">Upload Another File</button>
+      </div>
     </div>
   );
 }
