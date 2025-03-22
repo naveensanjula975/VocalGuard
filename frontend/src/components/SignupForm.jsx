@@ -11,7 +11,9 @@ export default function SignupForm() {
         </div>
 
         <form className="form2">
-          <label htmlFor="email" className="labb">Your Email</label>
+          <label htmlFor="email" className="labb">
+            Your Email
+          </label>
           <input
             type="email"
             id="email"
@@ -19,14 +21,18 @@ export default function SignupForm() {
             required
           />
 
-          <label htmlFor="password" className="lab">Enter New Password</label>
+          <label htmlFor="password" className="lab">
+            Enter New Password
+          </label>
           <input
             type="Password"
             id="CPassword"
             placeholder="Create password"
             required
           />
-          <label htmlFor="password" className="labb">Re Enter Password</label>
+          <label htmlFor="password" className="labb">
+            Re Enter Password
+          </label>
           <input
             type="password"
             id="confirmpassword"
@@ -36,8 +42,6 @@ export default function SignupForm() {
 
           <button type="submit">SIGNUP</button>
         </form>
-
-
 
         <div className="signup-wrapper">
           <div className="signup-container">
