@@ -48,7 +48,7 @@
 .get-started-btn {
   display: inline-block;
   padding: 1rem 2rem;
-  background: linear-gradient(135deg, #F8DCE0 0%, #E6E0FE 50%, #F5D6FA 100%);
+  background: linear-gradient(135deg, #f8dce0 0%, #e6e0fe 50%, #f5d6fa 100%);
   color: rgb(0, 0, 0);
   text-decoration: none;
   border-radius: 1rem;
