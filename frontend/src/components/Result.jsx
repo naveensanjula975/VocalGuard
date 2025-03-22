@@ -32,6 +32,15 @@ export default function Result() {
         <div className="bar3"></div>
         <div className="bar4">Low</div>
       </div>
+
+      <div className="mainresult">
+        
+        <h4>Original :</h4>
+        <div className="res2"></div>
+        <h4>AI :</h4>
+        <div className="res4"></div>
+      </div>
+
     </div>
   );
 }
