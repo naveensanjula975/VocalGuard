@@ -1,0 +1,252 @@
+.home-container {
+  min-height: calc(100vh - 70px);
+  padding: 2rem;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+}
+
+.home-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  gap: 4rem;
+  position: relative;
+}
+
+.left-section {
+  flex: 1;
+  padding-top: 3rem;
+}
+
+.main-title {
+  font-size: 3.5rem;
+  line-height: 1.2;
+  font-weight: 600;
+  color: #1a1a3a;
+  margin-bottom: 1.5rem;
+  position: relative;
+}
+
+.plus-one {
+  position: absolute;
+  top: 0;
+  right: 47.5%;
+  background: linear-gradient(135deg, #8a2be2 0%, #4b0082 100%);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 1rem;
+  font-weight: bold;
+  transform: rotate(15deg);
+}
+
+.subtitle {
+  font-size: 1.2rem;
+  color: #666;
+  margin-bottom: 2rem;
+  line-height: 1.6;
+}
+
+.get-started-btn {
+  display: inline-block;
+  padding: 1rem 2rem;
+  background: linear-gradient(135deg, #F8DCE0 0%, #E6E0FE 50%, #F5D6FA 100%);
+  color: rgb(0, 0, 0);
+  text-decoration: none;
+  border-radius: 1rem;
+  font-weight: 500;
+  margin-bottom: 3rem;
+  transition: transform 0.2s;
+}
+
+.get-started-btn:hover {
+  transform: translateY(-2px);
+}
+
+.features {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2rem;
+  margin-bottom: 3rem;
+}
+
+.feature h3 {
+  color: #1a1a3a;
+  margin-bottom: 0.5rem;
+}
+
+.feature p {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.copyright {
+  color: #999;
+  font-size: 0.9rem;
+}
+
+.brand {
+  font-weight: 600;
+  color: #1a1a3a;
+}
+
+.right-section {
+  flex: 1;
+  position: relative;
+}
+
+.demo-interface {
+  background: linear-gradient(135deg, #ffe6f3 0%, #fff0f5 100%);
+  border-radius: 2rem;
+  padding: 2rem;
+  position: relative;
+  min-height: 600px;
+}
+
+.audio-card {
+  background: white;
+  border-radius: 2rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+.play-button {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.play-icon {
+  background: #8a2be2;
+  color: white;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.waveform {
+  width: 150px;
+  height: 30px;
+  background: linear-gradient(90deg, #8a2be2 0%, #4b0082 100%);
+  border-radius: 1rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.waveform::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.2) 0px,
+    rgba(255, 255, 255, 0.2) 2px,
+    transparent 2px,
+    transparent 4px
+  );
+}
+
+.users {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 2rem 0;
+}
+
+.user-tag {
+  background: white;
+  padding: 0.5rem 1rem;
+  border-radius: 2rem;
+  font-size: 0.9rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.recording-section {
+  margin-top: 2rem;
+}
+
+.recording-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #ff4444;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 2rem;
+  margin-bottom: 1rem;
+}
+
+.voice-memo {
+  background: white;
+  border-radius: 1rem;
+  padding: 1rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+.memo-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.close {
+  cursor: pointer;
+  font-size: 1.2rem;
+}
+
+.memo-waveform {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.record-button {
+  color: #ff4444;
+}
+
+.waveform-visual {
+  flex: 1;
+  height: 20px;
+  background: #f0f0f0;
+  border-radius: 1rem;
+}
+
+.thumbs-up {
+  position: absolute;
+  bottom: 2rem;
+  right: 2rem;
+  font-size: 2rem;
+  transform: rotate(-15deg);
+}
+
+@media (max-width: 1024px) {
+  .home-content {
+    flex-direction: column;
+  }
+
+  .main-title {
+    font-size: 2.5rem;
+  }
+
+  .plus-one {
+    right: 10%;
+  }
+}
+
+@media (max-width: 768px) {
+  .features {
+    grid-template-columns: 1fr;
+  }
+
+  .demo-interface {
+    padding: 1rem;
+  }
+}

@@ -1,6 +1,6 @@
 // src/components/LoginForm.jsx
 import React from "react";
-import "../styles/styles.css"; // Import styles here
+import "../styles/styles.css";
 
 const LoginForm = () => {
   return (
@@ -27,7 +27,7 @@ const LoginForm = () => {
 
         <div className="signup-wrapper">
           <div className="signup-container">
-            <p>Don't have an account? <a href="#">Sign up</a></p>
+            <p>Don't have an account? <a href="/signup">Sign up</a></p>
           </div>
         </div>
       </div>
@@ -35,4 +35,4 @@ const LoginForm = () => {
   );
 };
 
-export default LoginForm; // Default export to allow it to be imported
+export default LoginForm; 
