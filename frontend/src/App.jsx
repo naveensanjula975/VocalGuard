@@ -6,8 +6,11 @@ import {
   Navigate,
   useLocation,
 } from "react-router-dom";
-import LoginPage from "./pages/LoginPage";
 import HomePage from "./pages/HomePage";
+
+
+import ResaultPage from "./pages/ResultPage";
+=======
 import AboutUsPage from "./pages/AboutPage";
 import Navbar from "./components/Navbar";
 import "./styles/styles.css";
@@ -35,7 +38,15 @@ const AppContent = () => {
 const App = () => {
   return (
     <Router>
+
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/result" element={<ResaultPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+=======
       <AppContent />
+
     </Router>
   );
 };
