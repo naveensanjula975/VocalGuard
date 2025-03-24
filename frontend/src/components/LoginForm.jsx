@@ -1,5 +1,6 @@
 // src/components/LoginForm.jsx
 import React from "react";
+import { Link } from "react-router-dom";
 
 const LoginForm = () => {
   return (
@@ -31,13 +32,13 @@ const LoginForm = () => {
         </form>
 
         <div className="forgot-password">
-          <a href="#">Forgot your password?</a>
+          <Link to="/forgot-password">Forgot your password?</Link>
         </div>
 
         <div className="signup-wrapper">
           <div className="signup-container">
             <p>
-              Don't have an account? <a href="/signup">Sign up</a>
+              Don't have an account? <Link to="/signup">Sign up</Link>
             </p>
           </div>
         </div>

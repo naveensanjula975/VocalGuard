@@ -9,14 +9,17 @@ import {
 import HomePage from "./pages/HomePage";
 import ResaultPage from "./pages/ResultPage";
 import AboutUsPage from "./pages/AboutPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import Navbar from "./components/Navbar";
 import LoginPage from "./pages/LoginPage";
-import Navbar from "./components/NavBar";
 import "./styles/styles.css";
 import "./App.css";
 
 const AppContent = () => {
   const location = useLocation();
-  const isAuthPage = ['/login', '/forgot-password', '/signup'].includes(location.pathname);
+  const isAuthPage = ["/login", "/forgot-password", "/signup"].includes(
+    location.pathname
+  );
 
   return (
     <div className="app">
@@ -26,6 +29,7 @@ const AppContent = () => {
           <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/about" element={<AboutUsPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/result" element={<ResaultPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
