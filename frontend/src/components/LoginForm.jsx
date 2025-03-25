@@ -1,6 +1,6 @@
 // src/components/LoginForm.jsx
 import React from "react";
-import "../styles/styles.css"; // Import styles here
+import { Link } from "react-router-dom";
 
 const LoginForm = () => {
   return (
@@ -13,21 +13,33 @@ const LoginForm = () => {
 
         <form>
           <label htmlFor="email">Your email</label>
-          <input type="email" id="email" placeholder="Enter your email" required />
+          <input
+            type="email"
+            id="email"
+            placeholder="Enter your email"
+            required
+          />
 
           <label htmlFor="password">Password</label>
-          <input type="password" id="password" placeholder="Enter your password" required />
+          <input
+            type="password"
+            id="password"
+            placeholder="Enter your password"
+            required
+          />
 
           <button type="submit">CONTINUE</button>
         </form>
 
         <div className="forgot-password">
-          <a href="#">Forgot your password?</a>
+          <Link to="/forgot-password">Forgot your password?</Link>
         </div>
 
         <div className="signup-wrapper">
           <div className="signup-container">
-            <p>Don't have an account? <a href="#">Sign up</a></p>
+            <p>
+              Don't have an account? <Link to="/signup">Sign up</Link>
+            </p>
           </div>
         </div>
       </div>
@@ -35,4 +47,4 @@ const LoginForm = () => {
   );
 };
 
-export default LoginForm; // Default export to allow it to be imported
+export default LoginForm;

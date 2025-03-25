@@ -4,21 +4,59 @@ import {
   Routes,
   Route,
   Navigate,
+  useLocation,
 } from "react-router-dom";
-import LoginPage from "./pages/LoginPage";
 import HomePage from "./pages/HomePage";
+
 import SignupPage from "./pages/SignupPage";
+=======
+import ResaultPage from "./pages/ResultPage";
+import AboutUsPage from "./pages/AboutPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import Navbar from "./components/Navbar";
+import LoginPage from "./pages/LoginPage";
+import UploadBox from "./components/UploadBox";
+
 import "./styles/styles.css";
+import "./App.css";
+
+const AppContent = () => {
+  const location = useLocation();
+  const isAuthPage = ["/login", "/forgot-password", "/signup"].includes(
+    location.pathname
+  );
+
+  return (
+    <div className="app">
+      {!isAuthPage && <Navbar />}
+      <main className="main-content">
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/about" element={<AboutUsPage />} />
+          <Route path="/upload" element={<UploadBox />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/result" element={<ResaultPage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </main>
+    </div>
+  );
+};
 
 const App = () => {
   return (
     <Router>
+
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+=======
+      <AppContent />
+
     </Router>
   );
 };

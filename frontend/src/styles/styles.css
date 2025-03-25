@@ -1,3 +1,5 @@
+
+
 * {
   margin: 0;
   padding: 0;
@@ -108,7 +110,6 @@ button:hover {
   margin-top: 20px;
 }
 
-/* ... existing code ... */
 
 .home-page {
   min-height: 100vh;
@@ -134,4 +135,9 @@ button:hover {
   margin-bottom: 40px;
 }
 
+
 /* ... existing code ... */
+=======
+
+
+
