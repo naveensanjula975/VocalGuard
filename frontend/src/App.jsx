@@ -10,11 +10,11 @@ import HomePage from "./pages/HomePage";
 import ResaultPage from "./pages/ResultPage";
 import AboutUsPage from "./pages/AboutPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
-import Navbar from "./components/Navbar";
+import SignupPage from "./pages/SignupPage";
+import HistoryPage from "./pages/HistoryPage";
 import LoginPage from "./pages/LoginPage";
-import UploadBox from "./components/UploadBox";
-import "./styles/styles.css";
-import "./App.css";
+import Navbar from "./components/Navbar";
+import "./index.css";
 
 const AppContent = () => {
   const location = useLocation();
@@ -29,8 +29,9 @@ const AppContent = () => {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
           <Route path="/about" element={<AboutUsPage />} />
-          <Route path="/upload" element={<UploadBox />} />
+          <Route path="/history" element={<HistoryPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/result" element={<ResaultPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
