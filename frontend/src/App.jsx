@@ -12,6 +12,7 @@ import AboutUsPage from "./pages/AboutPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import Navbar from "./components/Navbar";
 import LoginPage from "./pages/LoginPage";
+import UploadBox from "./components/UploadBox";
 import "./styles/styles.css";
 import "./App.css";
 
@@ -29,6 +30,7 @@ const AppContent = () => {
           <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/about" element={<AboutUsPage />} />
+          <Route path="/upload" element={<UploadBox />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/result" element={<ResaultPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
