@@ -1,88 +1,169 @@
-/* Center the upload box */
+/* Remove the body styles as they're conflicting with the layout */
 body {
-    margin: 0;
-    padding: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    background: #f0f0f0;
-    font-family: Arial, sans-serif;
-  }
-  
-  /* Upload box styling */
-  .upload-box {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    background: #fdeaff;
-    padding: 40px 30px;
-    border-radius: 20px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-    max-width: 400px;
-    width: 100%;
-    text-align: center;
-  }
-  
-  /* Title and subtitle */
-  .upload-title {
-    font-size: 28px;
-    color: #3e3e3e;
-    margin-bottom: 10px;
-  }
-  
-  .upload-subtitle {
-    color: #777;
-    margin-bottom: 20px;
-    font-size: 14px;
-  }
-  
-  /* Form styling */
-  .upload-form {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    gap: 15px;
-  }
-  
-  .upload-form label {
-    color: #3e3e3e;
-    font-size: 14px;
-    text-align: left;
-    margin-bottom: 5px;
-  }
-  
-  /* Input fields */
-  .upload-form input[type="email"],
-  .upload-form input[type="file"] {
-    padding: 12px;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    font-size: 14px;
-    outline: none;
-  }
-  
-/* Reshaped Shorter Centered Button */
-.upload-form button {
-    background: #d39afc;
-    color: white;
-    border: none;
-    width: 120px; /* Adjust this value as needed */
-    padding: 10px; /* Keeps padding for height */
-    border-radius: 20px;
-    font-size: 16px;
-    cursor: pointer;
-    margin-top: 10px;
-    display: inline-block;
-    transition: all 0.2s;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  margin: 0;
+  padding: 0;
+  font-family: Arial, sans-serif;
 }
 
-  
-  /* Button hover effect */
-  .upload-form button:hover {
-    background: #540b8a;
-    transform: scale(1.05);
+/* Upload box styling */
+.upload-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  min-height: calc(100vh - 64px); /* Adjust based on your navbar height */
+  padding: 2rem;
+  background: #f8f9fa;
+}
+
+.upload-box {
+  background: white;
+  padding: 2.5rem;
+  border-radius: 1rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto; /* Center the box */
+}
+
+/* Title and subtitle */
+.upload-title {
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: #2d3748;
+  margin-bottom: 0.5rem;
+  text-align: center;
+}
+
+.upload-subtitle {
+  color: #718096;
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+/* Form styling */
+.upload-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.upload-form label {
+  color: #3e3e3e;
+  font-size: 14px;
+  text-align: left;
+  margin-bottom: 5px;
+}
+
+/* Input fields */
+.upload-form input[type="email"],
+.upload-form input[type="file"] {
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+}
+
+.drop-zone {
+  border: 2px dashed #cbd5e0;
+  border-radius: 0.75rem;
+  padding: 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.drop-zone:hover {
+  border-color: #9f7aea;
+  background: #f7fafc;
+}
+
+.drop-zone.dragging {
+  border-color: #9f7aea;
+  background: #f7fafc;
+}
+
+.drop-zone.has-file {
+  border-style: solid;
+  border-color: #9f7aea;
+}
+
+.hidden-input {
+  display: none;
+}
+
+.drop-zone-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.upload-icon {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.file-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.file-name {
+  color: #4a5568;
+  font-weight: 500;
+}
+
+.remove-file {
+  background: none;
+  border: none;
+  color: #e53e3e;
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 0.25rem;
+}
+
+.remove-file:hover {
+  color: #c53030;
+}
+
+.error-message {
+  color: #e53e3e;
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+.upload-button {
+  background: linear-gradient(to right, #9f7aea, #ed64a6);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.upload-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.upload-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Add responsive padding for smaller screens */
+@media (max-width: 640px) {
+  .upload-container {
+    padding: 1rem;
   }
-  
-  
+
+  .upload-box {
+    padding: 1.5rem;
+  }
+}

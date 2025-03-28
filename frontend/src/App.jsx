@@ -6,6 +6,7 @@ import {
   Navigate,
   useLocation,
 } from "react-router-dom";
+import { AuthProvider } from "./context/AuthContext";
 import HomePage from "./pages/HomePage";
 import ResaultPage from "./pages/ResultPage";
 import AboutUsPage from "./pages/AboutPage";
@@ -14,6 +15,8 @@ import SignupPage from "./pages/SignupPage";
 import HistoryPage from "./pages/HistoryPage";
 import LoginPage from "./pages/LoginPage";
 import Navbar from "./components/Navbar";
+import UploadBox from "./components/UploadBox";
+import ProtectedRoute from "./components/ProtectedRoute";
 import "./index.css";
 
 const AppContent = () => {
@@ -31,7 +34,22 @@ const AppContent = () => {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/about" element={<AboutUsPage />} />
-          <Route path="/history" element={<HistoryPage />} />
+          <Route
+            path="/upload"
+            element={
+              <ProtectedRoute>
+                <UploadBox />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/history"
+            element={
+              <ProtectedRoute>
+                <HistoryPage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/result" element={<ResaultPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
@@ -43,9 +61,11 @@ const AppContent = () => {
 
 const App = () => {
   return (
-    <Router>
-      <AppContent />
-    </Router>
+    <AuthProvider>
+      <Router>
+        <AppContent />
+      </Router>
+    </AuthProvider>
   );
 };
 

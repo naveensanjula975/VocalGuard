@@ -1,13 +1,19 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { api } from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 const SignupPage = () => {
+  const navigate = useNavigate();
+  const { login } = useAuth();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
     confirmPassword: "",
+    username: "",
   });
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -20,18 +26,36 @@ const SignupPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setIsLoading(true);
 
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match");
+      setIsLoading(false);
       return;
     }
 
-    // TODO: Implement signup logic here
     try {
-      // API call would go here
-      console.log("Signup form submitted:", formData);
+      const signupData = {
+        email: formData.email,
+        password: formData.password,
+        username: formData.username,
+      };
+
+      const response = await api.signup(signupData);
+
+      // Login the user
+      login({
+        token: response.token,
+        user_id: response.user_id,
+        username: formData.username,
+      });
+
+      // Redirect to upload page
+      navigate("/upload");
     } catch (err) {
-      setError("Failed to create account. Please try again.");
+      setError(err.message || "Failed to create account. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -44,6 +68,24 @@ const SignupPage = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label
+              htmlFor="username"
+              className="block text-sm font-medium text-gray-700">
+              Display Name
+            </label>
+            <input
+              type="text"
+              id="username"
+              name="username"
+              value={formData.username}
+              onChange={handleChange}
+              required
+              className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              placeholder="Enter your display name"
+            />
+          </div>
+
           <div>
             <label
               htmlFor="email"
@@ -106,8 +148,9 @@ const SignupPage = () => {
 
           <button
             type="submit"
-            className="w-full px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition-all duration-200">
-            Create Account
+            disabled={isLoading}
+            className="w-full px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition-all duration-200 disabled:opacity-50">
+            {isLoading ? "Creating Account..." : "Create Account"}
           </button>
         </form>
 
