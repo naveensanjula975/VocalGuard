@@ -6,11 +6,14 @@ from models import UserSignUp, UserLogin
 import firebase_config
 import requests
 import json
+import os
 
 app = FastAPI()
 
-# Firebase Web API Key - Get this from your Firebase project settings
-FIREBASE_WEB_API_KEY = "your-firebase-web-api-key"
+# Firebase Web API Key
+FIREBASE_WEB_API_KEY = os.getenv("FIREBASE_WEB_API_KEY")
+if not FIREBASE_WEB_API_KEY:
+    raise RuntimeError("FIREBASE_WEB_API_KEY environment variable is not set")
 
 # Configure OAuth2
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
