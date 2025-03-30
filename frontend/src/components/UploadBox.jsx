@@ -1,6 +1,5 @@
 import React, { useState, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
-import "../styles/UploadBox.css";
 import { api } from "../services/api";
 
 const UploadBox = () => {
@@ -85,16 +84,24 @@ const UploadBox = () => {
   };
 
   return (
-    <div className="upload-container">
-      <div className="upload-box">
-        <h1 className="upload-title">Upload Audio</h1>
-        <p className="upload-subtitle">Upload MP3 or FLAC file to analyze</p>
+    <div className="flex justify-center items-center w-full min-h-[calc(100vh-64px)] p-8 bg-gray-50">
+      <div className="bg-white p-10 rounded-2xl shadow-lg w-full max-w-[500px] mx-auto">
+        <h1 className="text-2xl font-semibold text-gray-800 mb-2 text-center">
+          Upload Audio
+        </h1>
+        <p className="text-gray-600 text-center mb-8">
+          Upload MP3 or FLAC file to analyze
+        </p>
 
-        <form onSubmit={handleSubmit} className="upload-form">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-6">
           <div
-            className={`drop-zone ${isDragging ? "dragging" : ""} ${
-              file ? "has-file" : ""
-            }`}
+            className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-200
+              ${
+                isDragging
+                  ? "border-purple-500 bg-purple-50"
+                  : "border-gray-300 hover:border-purple-500 hover:bg-purple-50"
+              }
+              ${file ? "border-solid border-purple-500" : ""}`}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
@@ -104,14 +111,14 @@ const UploadBox = () => {
               type="file"
               accept=".mp3,.flac"
               onChange={handleFileSelect}
-              className="hidden-input"
+              className="hidden"
             />
             {file ? (
-              <div className="file-info">
-                <span className="file-name">{file.name}</span>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-700 truncate">{file.name}</span>
                 <button
                   type="button"
-                  className="remove-file"
+                  className="ml-4 text-gray-500 hover:text-red-500 text-xl"
                   onClick={(e) => {
                     e.stopPropagation();
                     setFile(null);
@@ -123,19 +130,28 @@ const UploadBox = () => {
                 </button>
               </div>
             ) : (
-              <div className="drop-zone-content">
-                <div className="upload-icon">📁</div>
-                <p>Drag & Drop your audio file here</p>
-                <p>or click to browse</p>
+              <div className="flex flex-col items-center gap-2">
+                <div className="text-4xl">📁</div>
+                <p className="text-gray-600">
+                  Drag & Drop your audio file here
+                </p>
+                <p className="text-gray-500 text-sm">or click to browse</p>
               </div>
             )}
           </div>
 
-          {error && <div className="error-message">{error}</div>}
+          {error && (
+            <div className="text-red-500 text-sm text-center">{error}</div>
+          )}
 
           <button
             type="submit"
-            className="upload-button"
+            className={`w-full py-3 px-6 rounded-lg font-semibold text-white transition-all duration-200
+              ${
+                !file || isLoading
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+              }`}
             disabled={!file || isLoading}>
             {isLoading ? "Uploading..." : "Analyze Audio"}
           </button>
