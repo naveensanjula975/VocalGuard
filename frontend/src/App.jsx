@@ -17,7 +17,6 @@ import LoginPage from "./pages/LoginPage";
 import Navbar from "./components/Navbar";
 import UploadBox from "./components/UploadBox";
 import ProtectedRoute from "./components/ProtectedRoute";
-import "./index.css";
 
 const AppContent = () => {
   const location = useLocation();
@@ -26,9 +25,9 @@ const AppContent = () => {
   );
 
   return (
-    <div className="app">
+    <div className="min-h-screen flex flex-col w-full">
       {!isAuthPage && <Navbar />}
-      <main className="main-content">
+      <main className="flex-1 w-full min-h-[calc(100vh-64px)] bg-gray-50">
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />
