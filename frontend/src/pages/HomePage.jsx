@@ -1,7 +1,10 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 const HomePage = () => {
+  const { user } = useAuth();
+
   return (
     <div className="min-h-[calc(100vh-70px)] p-8 bg-gradient-to-br from-white to-gray-50">
       <div className="max-w-7xl mx-auto flex gap-16 relative lg:flex-row flex-col">
@@ -21,9 +24,9 @@ const HomePage = () => {
           </p>
 
           <Link
-            to="/login"
+            to={user ? "/upload" : "/login"}
             className="inline-block px-8 py-4 bg-gradient-to-r from-pink-100 via-purple-100 to-pink-100 text-black rounded-xl font-medium mb-12 transition-transform hover:-translate-y-0.5">
-            Get Started
+            {user ? "Upload Voice" : "Get Started"}
           </Link>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
