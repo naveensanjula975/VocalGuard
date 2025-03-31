@@ -1,69 +1,92 @@
 import React from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 
-export default function Result() {
+const Result = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const result = location.state?.result;
+
+  if (!result) {
+    navigate("/upload");
+    return null;
+  }
+
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      <h1 className="text-4xl font-normal mb-8">Audio Analysis Results</h1>
-      <div className="bg-purple-100 rounded-lg p-6 mb-8">
-        <p className="text-2xl font-light">
-          Here are the results for the uploaded audio file...
-        </p>
-      </div>
-
-      <div className="bg-gray-100 rounded-lg p-6 mb-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="flex items-center">
-            <div className="w-1/3 text-lg font-semibold text-right pr-4">
-              File Name :
+    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-3xl mx-auto">
+        <div className="bg-white shadow rounded-lg p-6">
+          <h1 className="text-2xl font-bold text-gray-900 mb-6">Analysis Result</h1>
+          
+          <div className="space-y-6">
+            <div className="bg-gray-50 rounded-lg p-4">
+              <h2 className="text-lg font-semibold text-gray-900 mb-2">Audio Details</h2>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-500">File Name</p>
+                  <p className="font-medium">{result.fileName}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Duration</p>
+                  <p className="font-medium">{result.duration}</p>
+                </div>
+              </div>
             </div>
-            <div className="w-2/3 text-lg">audio_clip_01.wav</div>
-          </div>
-          <div className="flex items-center">
-            <div className="w-1/3 text-lg font-semibold text-right pr-4">
-              Duration :
+
+            <div className="bg-gray-50 rounded-lg p-4">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Analysis Result</h2>
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        result.isAI ? "bg-red-500" : "bg-green-500"
+                      }`}
+                      style={{ width: `${result.confidence}%` }}
+                    ></div>
+                  </div>
+                  <p className="text-sm text-gray-500 mt-2">
+                    Confidence: {result.confidence}%
+                  </p>
+                </div>
+                <div className={`ml-4 px-4 py-2 rounded-full ${
+                  result.isAI 
+                    ? "bg-red-100 text-red-800" 
+                    : "bg-green-100 text-green-800"
+                }`}>
+                  {result.isAI ? "AI Generated" : "Human Voice"}
+                </div>
+              </div>
             </div>
-            <div className="w-2/3 text-lg">3 minutes 12 seconds</div>
-          </div>
-          <div className="flex items-center">
-            <div className="w-1/3 text-lg font-semibold text-right pr-4">
-              Date :
+
+            <div className="bg-gray-50 rounded-lg p-4">
+              <h2 className="text-lg font-semibold text-gray-900 mb-2">Detailed Analysis</h2>
+              <div className="space-y-2">
+                {result.details.map((detail, index) => (
+                  <div key={index} className="flex items-center justify-between">
+                    <span className="text-gray-600">{detail.label}</span>
+                    <span className="font-medium">{detail.value}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="w-2/3 text-lg">Feb 7, 2025</div>
+
+            <div className="flex justify-end gap-4">
+              <button
+                onClick={() => navigate("/upload")}
+                className="px-4 py-2 text-gray-700 hover:text-gray-900 font-medium">
+                Upload Another
+              </button>
+              <button
+                onClick={() => navigate("/")}
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700">
+                Back to Home
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-
-      <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-8">
-        <div className="text-lg font-medium">High</div>
-        <div className="flex gap-4">
-          <div className="h-4 w-32 bg-gradient-to-r from-purple-500 to-purple-600 rounded"></div>
-          <div className="h-4 w-32 bg-gradient-to-r from-purple-300 to-purple-400 rounded"></div>
-        </div>
-        <div className="text-lg font-medium">Low</div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-        <div className="flex items-center gap-4">
-          <h4 className="text-xl font-medium">Original :</h4>
-          <div className="text-2xl font-bold text-purple-600">80%</div>
-        </div>
-        <div className="flex items-center gap-4">
-          <h4 className="text-xl font-medium">AI :</h4>
-          <div className="text-2xl font-bold text-pink-600">20%</div>
-        </div>
-      </div>
-
-      <div className="flex flex-col sm:flex-row gap-4 justify-center">
-        <button className="px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg font-semibold hover:from-purple-600 hover:to-purple-700 transition-all duration-200 shadow-sm hover:shadow focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2">
-          Check History
-        </button>
-        <button className="px-6 py-3 bg-gradient-to-r from-pink-500 to-pink-600 text-white rounded-lg font-semibold hover:from-pink-600 hover:to-pink-700 transition-all duration-200 shadow-sm hover:shadow focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2">
-          Download Report
-        </button>
-        <button className="px-6 py-3 bg-gradient-to-r from-gray-500 to-gray-600 text-white rounded-lg font-semibold hover:from-gray-600 hover:to-gray-700 transition-all duration-200 shadow-sm hover:shadow focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
-          Upload Another File
-        </button>
       </div>
     </div>
   );
-}
+};
+
+export default Result;

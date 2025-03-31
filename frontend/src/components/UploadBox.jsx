@@ -1,14 +1,33 @@
 import React, { useState, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../services/api";
+import { useNavigate } from "react-router-dom";
+import LoadingSpinner from "./LoadingSpinner";
 
 const UploadBox = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [file, setFile] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const fileInputRef = useRef(null);
+
+  // Dummy data for testing
+  const dummyResult = {
+    fileName: "sample_audio.mp3",
+    duration: "2:45",
+    isAI: Math.random() > 0.5, // Randomly decide if it's AI or human
+    confidence: Math.floor(Math.random() * 30) + 70, // Random confidence between 70-100
+    details: [
+      { label: "Voice Clarity", value: "High" },
+      { label: "Background Noise", value: "Low" },
+      { label: "Sample Rate", value: "44.1 kHz" },
+      { label: "Bit Depth", value: "16-bit" },
+      { label: "Channels", value: "Mono" },
+      { label: "Processing Time", value: "1.2 seconds" }
+    ]
+  };
 
   const handleDragOver = (e) => {
     e.preventDefault();
@@ -66,16 +85,23 @@ const UploadBox = () => {
 
     setIsLoading(true);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("user_id", user.userId);
-
-      await api.uploadFile(formData, user.token);
-
-      setFile(null);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Use dummy data instead of actual API call
+      // const formData = new FormData();
+      // formData.append("file", file);
+      // formData.append("user_id", user.userId);
+      // const response = await api.uploadFile(formData, user.token);
+      
+      // Update dummy result with actual file name
+      const result = {
+        ...dummyResult,
+        fileName: file.name
+      };
+      
+      // Navigate to result page with the dummy result
+      navigate("/result", { state: { result } });
     } catch (err) {
       setError("Failed to upload file. Please try again.");
     } finally {
@@ -85,6 +111,7 @@ const UploadBox = () => {
 
   return (
     <div className="flex justify-center items-center w-full min-h-[calc(100vh-64px)] p-8 bg-gray-50">
+      {isLoading && <LoadingSpinner />}
       <div className="bg-white p-10 rounded-2xl shadow-lg w-full max-w-[500px] mx-auto">
         <h1 className="text-2xl font-semibold text-gray-800 mb-2 text-center">
           Upload Audio
@@ -153,7 +180,7 @@ const UploadBox = () => {
                   : "bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
               }`}
             disabled={!file || isLoading}>
-            {isLoading ? "Uploading..." : "Analyze Audio"}
+            {isLoading ? "Processing..." : "Analyze Audio"}
           </button>
         </form>
       </div>
