@@ -17,6 +17,7 @@ import LoginPage from "./pages/LoginPage";
 import Navbar from "./components/Navbar";
 import UploadBox from "./components/UploadBox";
 import ProtectedRoute from "./components/ProtectedRoute";
+import ProfilePage from "./pages/ProfilePage";
 
 const AppContent = () => {
   const location = useLocation();
@@ -51,6 +52,7 @@ const AppContent = () => {
           />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/result" element={<ResaultPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
