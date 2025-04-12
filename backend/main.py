@@ -2,7 +2,8 @@ from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
 from firebase_admin import auth
-from models import UserSignUp, UserLogin
+from models import UserSignUp, UserLogin,ForgotPasswordRequest, ResetPasswordRequest
+from reset_password import send_reset_email, reset_password
 import firebase_config
 import requests
 import json
@@ -106,3 +107,17 @@ async def protected_route(token_data: dict = Depends(verify_token)):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+@app.post("/forgot-password")
+def forgot_password(req: ForgotPasswordRequest):
+    success = send_reset_email(req.email)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to send reset link")
+    return {"message": "Reset link sent successfully"}
+
+@app.post("/reset-password")
+def reset_user_password(req: ResetPasswordRequest):
+    success = reset_password(req.token, req.new_password)
+    if not success:
+        raise HTTPException(status_code=400, detail="Invalid or expired token")
+    return {"message": "Password updated successfully"}

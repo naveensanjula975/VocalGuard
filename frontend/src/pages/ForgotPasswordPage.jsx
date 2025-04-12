@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
+import axios from "axios";
 
 const ForgotPasswordPage = () => {
   const [email, setEmail] = useState("");
@@ -9,20 +10,22 @@ const ForgotPasswordPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
+    setStatus({ type: "", message: "" });
 
     try {
-      // TODO: Implement actual API call here
-      // Simulating API call for now
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const response = await axios.post("http://localhost:8000/forgot-password", {
+        email,
+      });
 
       setStatus({
         type: "success",
-        message: "Password reset link has been sent to your email!",
+        message: "✅ Reset link sent! Check your email inbox.",
       });
     } catch (error) {
+      console.error("Forgot password error:", error);
       setStatus({
         type: "error",
-        message: "Failed to send reset link. Please try again.",
+        message: "❌ Failed to send reset link. Please try again.",
       });
     } finally {
       setIsLoading(false);
@@ -38,15 +41,12 @@ const ForgotPasswordPage = () => {
         </div>
 
         <p className="text-gray-600 text-sm mb-6 text-left">
-          Enter your email address and we'll send you a link to reset your
-          password.
+          Enter your email address and we'll send you a link to reset your password.
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-gray-700">
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
               Email address
             </label>
             <input

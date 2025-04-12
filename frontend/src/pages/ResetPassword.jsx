@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-
+import axios from "axios";
 
 const ResetPassword = () => {
   const [password, setPassword] = useState("");
@@ -8,10 +8,22 @@ const ResetPassword = () => {
   const [token, setToken] = useState("");
   const [status, setStatus] = useState({ type: "", message: "" });
   const [isLoading, setIsLoading] = useState(false);
+  const [checkedToken, setCheckedToken] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    setToken(params.get("token"));
+    const tokenFromUrl = params.get("token");
+
+    if (!tokenFromUrl) {
+      setCheckedToken(false);
+      setStatus({
+        type: "error",
+        message: "Invalid or missing token in the URL.",
+      });
+    } else {
+      setToken(tokenFromUrl);
+      setCheckedToken(true);
+    }
   }, []);
 
   const handleSubmit = async (e) => {
@@ -25,20 +37,32 @@ const ResetPassword = () => {
       return;
     }
 
+    if (!token) {
+      setStatus({
+        type: "error",
+        message: "Missing reset token.",
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
       await axios.post("http://localhost:8000/reset-password", {
         token,
         new_password: password,
       });
+
       setStatus({
         type: "success",
-        message: "Password updated successfully!",
+        message: "✅ Password updated successfully! You can now log in.",
       });
+      setPassword("");
+      setConfirmPassword("");
     } catch (err) {
+      console.error("Reset error:", err);
       setStatus({
         type: "error",
-        message: "Something went wrong. Please try again.",
+        message: "❌ Something went wrong. Please try again.",
       });
     } finally {
       setIsLoading(false);
@@ -66,7 +90,10 @@ const ResetPassword = () => {
               type="password"
               id="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setStatus({ type: "", message: "" }); // Clear message
+              }}
               placeholder="Enter new password"
               required
               className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
@@ -81,14 +108,17 @@ const ResetPassword = () => {
               type="password"
               id="confirm-password"
               value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
+              onChange={(e) => {
+                setConfirmPassword(e.target.value);
+                setStatus({ type: "", message: "" }); // Clear message
+              }}
               placeholder="Re-enter password"
               required
               className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             />
           </div>
 
-          {status.message && (
+          {checkedToken && status.message && (
             <div
               className={`p-4 rounded-lg text-sm ${
                 status.type === "success"
