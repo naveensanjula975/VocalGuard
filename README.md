@@ -8,8 +8,10 @@ Frontend: Deployed to Firebase Hosting.
 
 Backend: Deployed to Google Cloud Run.
 
+```uvicorn main:app --reload```
+
 ## Tech Stack
-Backend: Flask, Firebase
+Backend: FastAPI, Firebase
 
 Frontend: React.js
 

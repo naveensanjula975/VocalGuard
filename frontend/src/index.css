@@ -2,6 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
+@import "tailwindcss";
+
 @layer base {
   body {
     @apply font-['Poppins'] bg-white text-gray-900 m-0 min-h-screen;
@@ -11,6 +13,16 @@
 @layer components {
   .container {
     @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+}
+
+@layer utilities {
+  .app {
+    @apply min-h-screen flex flex-col w-full;
+  }
+
+  .main-content {
+    @apply flex-1 w-full min-h-[calc(100vh-64px)] bg-gray-50;
   }
 }
 
