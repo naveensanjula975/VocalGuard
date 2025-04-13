@@ -2,32 +2,18 @@ import React, { useState, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../services/api";
 import { useNavigate } from "react-router-dom";
-import LoadingSpinner from "./LoadingSpinner";
+import ProgressIndicator from "./ProgressIndicator";
 
 const UploadBox = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [file, setFile] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadStatus, setUploadStatus] = useState("");
   const [error, setError] = useState("");
   const fileInputRef = useRef(null);
-
-  // Dummy data for testing
-  const dummyResult = {
-    fileName: "sample_audio.mp3",
-    duration: "2:45",
-    isAI: Math.random() > 0.5, // Randomly decide if it's AI or human
-    confidence: Math.floor(Math.random() * 30) + 70, // Random confidence between 70-100
-    details: [
-      { label: "Voice Clarity", value: "High" },
-      { label: "Background Noise", value: "Low" },
-      { label: "Sample Rate", value: "44.1 kHz" },
-      { label: "Bit Depth", value: "16-bit" },
-      { label: "Channels", value: "Mono" },
-      { label: "Processing Time", value: "1.2 seconds" }
-    ]
-  };
 
   const handleDragOver = (e) => {
     e.preventDefault();
@@ -76,6 +62,68 @@ const UploadBox = () => {
     }
   };
 
+  const simulateProgress = () => {
+    let progress = 0;
+    const interval = setInterval(() => {
+      progress += Math.random() * 10;
+      if (progress >= 100) {
+        progress = 100;
+        clearInterval(interval);
+        setTimeout(() => {
+          setIsUploading(false);
+          navigate("/result", { state: { result: generateDummyResult() } });
+        }, 500);
+      }
+      setUploadProgress(Math.min(progress, 100));
+      setUploadStatus(getStatusMessage(progress));
+    }, 500);
+  };
+
+  const getStatusMessage = (progress) => {
+    if (progress < 30) return "Preparing file...";
+    if (progress < 60) return "Analyzing audio...";
+    if (progress < 90) return "Processing results...";
+    return "Almost done...";
+  };
+
+  const generateDummyResult = () => {
+    return {
+      fileName: file.name,
+      duration: "2:45",
+      fileSize: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
+      format: file.type.split("/")[1].toUpperCase(),
+      isAI: Math.random() > 0.5,
+      confidence: Math.floor(Math.random() * 30) + 70,
+      timestamp: new Date().toISOString(),
+      sampleRate: "44.1 kHz",
+      bitDepth: "16 bits",
+      channels: "2 (Stereo)",
+      analysisTime: "2450",
+      details: [
+        {
+          label: "Voice Pattern Analysis",
+          value: "Natural",
+          description: "Patterns match typical human speech characteristics",
+        },
+        {
+          label: "Frequency Analysis",
+          value: "Normal",
+          description: "Frequency distribution within expected human range",
+        },
+        {
+          label: "Background Noise",
+          value: "Low",
+          description: "Minimal background noise detected",
+        },
+        {
+          label: "Speech Clarity",
+          value: "High",
+          description: "Clear and distinct speech patterns",
+        },
+      ],
+    };
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!file) {
@@ -83,106 +131,94 @@ const UploadBox = () => {
       return;
     }
 
-    setIsLoading(true);
-    try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Use dummy data instead of actual API call
-      // const formData = new FormData();
-      // formData.append("file", file);
-      // formData.append("user_id", user.userId);
-      // const response = await api.uploadFile(formData, user.token);
-      
-      // Update dummy result with actual file name
-      const result = {
-        ...dummyResult,
-        fileName: file.name
-      };
-      
-      // Navigate to result page with the dummy result
-      navigate("/result", { state: { result } });
-    } catch (err) {
-      setError("Failed to upload file. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
+    setIsUploading(true);
+    setUploadProgress(0);
+    setUploadStatus("Starting upload...");
+    simulateProgress();
   };
 
   return (
     <div className="flex justify-center items-center w-full min-h-[calc(100vh-64px)] p-8 bg-gray-50">
-      {isLoading && <LoadingSpinner />}
       <div className="bg-white p-10 rounded-2xl shadow-lg w-full max-w-[500px] mx-auto">
-        <h1 className="text-2xl font-semibold text-gray-800 mb-2 text-center">
+        <h1 className="mb-2 text-2xl font-semibold text-center text-gray-800">
           Upload Audio
         </h1>
-        <p className="text-gray-600 text-center mb-8">
+        <p className="mb-8 text-center text-gray-600">
           Upload MP3 or FLAC file to analyze
         </p>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-          <div
-            className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-200
-              ${
-                isDragging
-                  ? "border-purple-500 bg-purple-50"
-                  : "border-gray-300 hover:border-purple-500 hover:bg-purple-50"
-              }
-              ${file ? "border-solid border-purple-500" : ""}`}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".mp3,.flac"
-              onChange={handleFileSelect}
-              className="hidden"
+        {isUploading ? (
+          <div className="flex flex-col items-center justify-center py-8">
+            <ProgressIndicator
+              progress={uploadProgress}
+              status={uploadStatus}
             />
-            {file ? (
-              <div className="flex items-center justify-between">
-                <span className="text-gray-700 truncate">{file.name}</span>
-                <button
-                  type="button"
-                  className="ml-4 text-gray-500 hover:text-red-500 text-xl"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setFile(null);
-                    if (fileInputRef.current) {
-                      fileInputRef.current.value = "";
-                    }
-                  }}>
-                  ×
-                </button>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center gap-2">
-                <div className="text-4xl">📁</div>
-                <p className="text-gray-600">
-                  Drag & Drop your audio file here
-                </p>
-                <p className="text-gray-500 text-sm">or click to browse</p>
-              </div>
-            )}
           </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+            <div
+              className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-200
+                ${
+                  isDragging
+                    ? "border-purple-500 bg-purple-50"
+                    : "border-gray-300 hover:border-purple-500 hover:bg-purple-50"
+                }
+                ${file ? "border-solid border-purple-500" : ""}`}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".mp3,.flac"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+              {file ? (
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-700 truncate">{file.name}</span>
+                  <button
+                    type="button"
+                    className="ml-4 text-xl text-gray-500 hover:text-red-500"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setFile(null);
+                      if (fileInputRef.current) {
+                        fileInputRef.current.value = "";
+                      }
+                    }}>
+                    ×
+                  </button>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-2">
+                  <div className="text-4xl">📁</div>
+                  <p className="text-gray-600">
+                    Drag & Drop your audio file here
+                  </p>
+                  <p className="text-sm text-gray-500">or click to browse</p>
+                </div>
+              )}
+            </div>
 
-          {error && (
-            <div className="text-red-500 text-sm text-center">{error}</div>
-          )}
+            {error && (
+              <div className="text-sm text-center text-red-500">{error}</div>
+            )}
 
-          <button
-            type="submit"
-            className={`w-full py-3 px-6 rounded-lg font-semibold text-white transition-all duration-200
-              ${
-                !file || isLoading
-                  ? "bg-gray-400 cursor-not-allowed"
-                  : "bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
-              }`}
-            disabled={!file || isLoading}>
-            {isLoading ? "Processing..." : "Analyze Audio"}
-          </button>
-        </form>
+            <button
+              type="submit"
+              className={`w-full py-3 px-6 rounded-lg font-semibold text-white transition-all duration-200
+                ${
+                  !file
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+                }`}
+              disabled={!file}>
+              Analyze Audio
+            </button>
+          </form>
+        )}
       </div>
     </div>
   );
