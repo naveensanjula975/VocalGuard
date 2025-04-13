@@ -14,3 +14,5 @@ backend/venv
 serviceAccountKey.json
 backend/__pycache__/
 backend/__init__.py
+.cursor/rules/rule1.mdc
+

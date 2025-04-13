@@ -1,12 +1,6 @@
-<<<<<<< HEAD
-import React from "react";
-import { Link } from "react-router-dom";
-import "../styles/Navbar.css";
-=======
 import React, { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
->>>>>>> 21fd32b7e07874eceb8a2fe6ad7c9316afcbdd5c
 import logo from "../assets/logoo.png";
 
 const Navbar = () => {
@@ -37,52 +31,38 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="px-4 sm:px-8 py-4 mt-5 relative bg-white">
-      <div className="max-w-7xl mx-auto flex justify-between items-center">
+    <nav className="relative px-4 py-4 mt-5 bg-white sm:px-8">
+      <div className="flex items-center justify-between mx-auto max-w-7xl">
         <Link to="/" className="flex items-center gap-2 no-underline">
-          <img src={logo} alt="VocalGuard" className="h-10 w-auto" />
+          <img src={logo} alt="VocalGuard" className="w-auto h-10" />
         </Link>
 
-<<<<<<< HEAD
-        <div className="nav-links">
-          <Link to="/" className="nav-link">
-            Home
-          </Link>
-          <span className="separator">|</span>
-          <Link to="/about" className="nav-link">
-            About us
-          </Link>
-          <span className="separator">|</span>
-          <Link to="/history" className="nav-link">
-            History
-          </Link>
-=======
         {/* Desktop Menu */}
-        <div className="hidden md:flex items-center gap-12">
+        <div className="items-center hidden gap-12 md:flex">
           {user ? (
             // Logged in menu
             <>
               <Link
                 to="/"
-                className="text-gray-700 text-base font-medium hover:text-purple-600 transition-colors duration-200">
+                className="text-base font-medium text-gray-700 transition-colors duration-200 hover:text-purple-600">
                 Home
               </Link>
               <Link
                 to="/about"
-                className="text-gray-700 text-base font-medium hover:text-purple-600 transition-colors duration-200">
+                className="text-base font-medium text-gray-700 transition-colors duration-200 hover:text-purple-600">
                 About us
               </Link>
               <Link
                 to="/history"
-                className="text-gray-700 text-base font-medium hover:text-purple-600 transition-colors duration-200">
+                className="text-base font-medium text-gray-700 transition-colors duration-200 hover:text-purple-600">
                 History
               </Link>
               <div className="relative" ref={profileRef}>
                 <button
                   onClick={() => setIsProfileOpen(!isProfileOpen)}
-                  className="flex items-center gap-2 text-gray-700 hover:text-purple-600 transition-colors duration-200">
-                  <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
-                    <span className="text-purple-600 font-medium">
+                  className="flex items-center gap-2 text-gray-700 transition-colors duration-200 hover:text-purple-600">
+                  <div className="flex items-center justify-center w-8 h-8 bg-purple-100 rounded-full">
+                    <span className="font-medium text-purple-600">
                       {user.username?.[0]?.toUpperCase() || "U"}
                     </span>
                   </div>
@@ -104,7 +84,7 @@ const Navbar = () => {
                 </button>
 
                 {isProfileOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 z-50">
+                  <div className="absolute right-0 z-50 w-48 py-1 mt-2 bg-white rounded-lg shadow-lg">
                     <Link
                       to="/profile"
                       className="block px-4 py-2 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-600">
@@ -112,7 +92,7 @@ const Navbar = () => {
                     </Link>
                     <button
                       onClick={handleLogout}
-                      className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                      className="block w-full px-4 py-2 text-sm text-left text-red-600 hover:bg-red-50">
                       Logout
                     </button>
                   </div>
@@ -124,17 +104,17 @@ const Navbar = () => {
             <>
               <Link
                 to="/"
-                className="text-gray-700 text-base font-medium hover:text-purple-600 transition-colors duration-200">
+                className="text-base font-medium text-gray-700 transition-colors duration-200 hover:text-purple-600">
                 Home
               </Link>
               <Link
                 to="/about"
-                className="text-gray-700 text-base font-medium hover:text-purple-600 transition-colors duration-200">
+                className="text-base font-medium text-gray-700 transition-colors duration-200 hover:text-purple-600">
                 About us
               </Link>
               <Link
                 to="/login"
-                className="text-gray-700 text-base font-medium hover:text-purple-600 transition-colors duration-200">
+                className="text-base font-medium text-gray-700 transition-colors duration-200 hover:text-purple-600">
                 Login
               </Link>
             </>
@@ -143,7 +123,7 @@ const Navbar = () => {
 
         {/* Mobile Menu Button */}
         <button
-          className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
+          className="p-2 transition-colors duration-200 rounded-lg md:hidden hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500"
           onClick={() => setIsMenuOpen(!isMenuOpen)}
           aria-label="Toggle menu"
           aria-expanded={isMenuOpen}>
@@ -183,27 +163,27 @@ const Navbar = () => {
             <>
               <Link
                 to="/"
-                className="text-gray-700 text-base font-medium hover:text-purple-600 transition-colors duration-200 px-4 py-2 hover:bg-gray-50 rounded-lg">
+                className="px-4 py-2 text-base font-medium text-gray-700 transition-colors duration-200 rounded-lg hover:text-purple-600 hover:bg-gray-50">
                 Home
               </Link>
               <Link
                 to="/about"
-                className="text-gray-700 text-base font-medium hover:text-purple-600 transition-colors duration-200 px-4 py-2 hover:bg-gray-50 rounded-lg">
+                className="px-4 py-2 text-base font-medium text-gray-700 transition-colors duration-200 rounded-lg hover:text-purple-600 hover:bg-gray-50">
                 About us
               </Link>
               <Link
                 to="/history"
-                className="text-gray-700 text-base font-medium hover:text-purple-600 transition-colors duration-200 px-4 py-2 hover:bg-gray-50 rounded-lg">
+                className="px-4 py-2 text-base font-medium text-gray-700 transition-colors duration-200 rounded-lg hover:text-purple-600 hover:bg-gray-50">
                 History
               </Link>
               <Link
                 to="/profile"
-                className="text-gray-700 text-base font-medium hover:text-purple-600 transition-colors duration-200 px-4 py-2 hover:bg-gray-50 rounded-lg">
+                className="px-4 py-2 text-base font-medium text-gray-700 transition-colors duration-200 rounded-lg hover:text-purple-600 hover:bg-gray-50">
                 Profile Settings
               </Link>
               <button
                 onClick={handleLogout}
-                className="text-left text-red-600 text-base font-medium px-4 py-2 hover:bg-red-50 rounded-lg">
+                className="px-4 py-2 text-base font-medium text-left text-red-600 rounded-lg hover:bg-red-50">
                 Logout
               </button>
             </>
@@ -211,22 +191,21 @@ const Navbar = () => {
             <>
               <Link
                 to="/"
-                className="text-gray-700 text-base font-medium hover:text-purple-600 transition-colors duration-200 px-4 py-2 hover:bg-gray-50 rounded-lg">
+                className="px-4 py-2 text-base font-medium text-gray-700 transition-colors duration-200 rounded-lg hover:text-purple-600 hover:bg-gray-50">
                 Home
               </Link>
               <Link
                 to="/about"
-                className="text-gray-700 text-base font-medium hover:text-purple-600 transition-colors duration-200 px-4 py-2 hover:bg-gray-50 rounded-lg">
+                className="px-4 py-2 text-base font-medium text-gray-700 transition-colors duration-200 rounded-lg hover:text-purple-600 hover:bg-gray-50">
                 About us
               </Link>
               <Link
                 to="/login"
-                className="text-gray-700 text-base font-medium hover:text-purple-600 transition-colors duration-200 px-4 py-2 hover:bg-gray-50 rounded-lg">
+                className="px-4 py-2 text-base font-medium text-gray-700 transition-colors duration-200 rounded-lg hover:text-purple-600 hover:bg-gray-50">
                 Login
               </Link>
             </>
           )}
->>>>>>> 21fd32b7e07874eceb8a2fe6ad7c9316afcbdd5c
         </div>
       </div>
     </nav>
