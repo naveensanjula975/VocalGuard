@@ -8,3 +8,16 @@ Environment variables
 .github/workflows/google-cloud-run.yml
 .github/workflows/firebase-hosting.yml
 Dockerfile
+backend/__pycache__/firebase_config.cpython-312.pyc
+backend/__pycache__/main.cpython-312.pyc
+backend/__pycache__/models.cpython-312.pyc
+backend/venv/
+backend/env/
+backend/env/
+backend/env/
+backend/env/
+backend/env/
+backend/env/
+backend/serviceAccountKey.json
+.cursor/rules/rule1.mdc
+backend/__init__.py
