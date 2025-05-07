@@ -18,6 +18,8 @@ import Navbar from "./components/Navbar";
 import UploadBox from "./components/UploadBox";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ProfilePage from "./pages/ProfilePage";
+import Result from "./components/Result";
+import DetailedAnalysisPage from "./pages/DetailedAnalysisPage";
 
 const AppContent = () => {
   const location = useLocation();
@@ -26,7 +28,7 @@ const AppContent = () => {
   );
 
   return (
-    <div className="min-h-screen flex flex-col w-full">
+    <div className="flex flex-col w-full min-h-screen">
       {!isAuthPage && <Navbar />}
       <main className="flex-1 w-full min-h-[calc(100vh-64px)] bg-gray-50">
         <Routes>
@@ -53,6 +55,7 @@ const AppContent = () => {
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/result" element={<ResaultPage />} />
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/detailed-analysis" element={<DetailedAnalysisPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
