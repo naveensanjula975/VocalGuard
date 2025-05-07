@@ -18,6 +18,7 @@ import Navbar from "./components/Navbar";
 import UploadBox from "./components/UploadBox";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ProfilePage from "./pages/ProfilePage";
+
 import ResetPassword from "./pages/ResetPassword";
 
 const AppContent = () => {
@@ -27,7 +28,7 @@ const AppContent = () => {
   );
 
   return (
-    <div className="min-h-screen flex flex-col w-full">
+    <div className="flex flex-col w-full min-h-screen">
       {!isAuthPage && <Navbar />}
       <main className="flex-1 w-full min-h-[calc(100vh-64px)] bg-gray-50">
         <Routes>
