@@ -163,6 +163,14 @@ const SignupPage = () => {
               Sign in
             </Link>
           </p>
+          <p className="text-sm text-gray-600">
+            Go Back To{" "}
+            <Link
+              to="/"
+              className="text-purple-600 hover:text-purple-700 font-medium">
+              Home
+            </Link>
+          </p>
         </div>
       </div>
     </div>
