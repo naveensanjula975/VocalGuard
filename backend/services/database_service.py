@@ -12,10 +12,9 @@ class DatabaseService:
         """Initialize the database service"""
         # Get the database reference
         self.db_ref = db.reference('/')
-        
-    def create_audio_metadata(self, user_id: str, filename: str, file_size: int, 
+          def create_audio_metadata(self, user_id: str, filename: str, file_size: int, 
                              duration: float, sample_rate: int, channels: int = 2, 
-                             bit_depth: str = "16 bits") -> str:
+                             bit_depth: str = "16 bits", upload_timestamp: str = None) -> str:
         """
         Store metadata about an uploaded audio file
         
@@ -27,11 +26,15 @@ class DatabaseService:
             sample_rate: Sample rate of the audio
             channels: Number of audio channels (default: 2)
             bit_depth: Bit depth of the audio (default: "16 bits")
+            upload_timestamp: Custom timestamp (default: current time)
             
         Returns:
             str: ID of the created record
         """
         metadata_id = str(uuid.uuid4())
+        
+        # Use custom timestamp if provided, otherwise use current time
+        timestamp = upload_timestamp if upload_timestamp else datetime.datetime.now().isoformat()
         
         metadata = {
             'id': metadata_id,
@@ -42,16 +45,16 @@ class DatabaseService:
             'sample_rate': sample_rate,
             'channels': channels,
             'bit_depth': bit_depth,
-            'upload_timestamp': datetime.datetime.now().isoformat(),
+            'upload_timestamp': timestamp,
         }
         
         # Push data to Firebase
         self.db_ref.child('audio_metadata').child(metadata_id).set(metadata)
         
         return metadata_id
-        
-    def create_analysis_result(self, metadata_id: str, is_deepfake: bool, 
-                              confidence_score: float, features_used: List[str]) -> str:
+          def create_analysis_result(self, metadata_id: str, is_deepfake: bool, 
+                              confidence_score: float, features_used: List[str], 
+                              analysis_timestamp: str = None) -> str:
         """
         Store the results of deepfake analysis
         
@@ -60,11 +63,15 @@ class DatabaseService:
             is_deepfake: Boolean indicating if the audio is a deepfake
             confidence_score: Confidence score of the prediction (0-1)
             features_used: List of features used in the analysis
+            analysis_timestamp: Custom timestamp for analysis (default: current time)
             
         Returns:
             str: ID of the created analysis record
         """
         analysis_id = str(uuid.uuid4())
+        
+        # Use custom timestamp if provided, otherwise use current time
+        timestamp = analysis_timestamp if analysis_timestamp else datetime.datetime.now().isoformat()
         
         analysis = {
             'id': analysis_id,
@@ -72,7 +79,7 @@ class DatabaseService:
             'is_deepfake': is_deepfake,
             'confidence_score': confidence_score,
             'features_used': features_used,
-            'analysis_timestamp': datetime.datetime.now().isoformat(),
+            'analysis_timestamp': timestamp,
         }
         
         # Push data to Firebase
@@ -190,35 +197,34 @@ class DatabaseService:
             List of created analysis IDs
         """
         analysis_ids = []
-        
-        # Create dummy audio metadata
+          # Create dummy audio metadata
         dummy_files = [
-            {"name": "speech_sample_1.wav", "size": 1245670, "duration": 12.5, "sample_rate": 44100},
-            {"name": "interview_clip.mp3", "size": 3456700, "duration": 45.2, "sample_rate": 48000},
-            {"name": "voice_message.m4a", "size": 567890, "duration": 8.7, "sample_rate": 22050},
-            {"name": "podcast_segment.wav", "size": 7890123, "duration": 120.0, "sample_rate": 44100}
+            {"name": "audio_clip_10.wav", "size": 1245670, "duration": 15.3, "sample_rate": 44100, "date": "2025-02-07", "is_fake": False, "confidence": 0.97},
+            {"name": "audio_clip_09.mp3", "size": 3456700, "duration": 32.4, "sample_rate": 48000, "date": "2025-02-01", "is_fake": True, "confidence": 0.75},
+            {"name": "audio_clip_08.wav", "size": 567890, "duration": 24.8, "sample_rate": 44100, "date": "2025-01-30", "is_fake": False, "confidence": 1.0}
         ]
         
         for file in dummy_files:
-            # Create metadata
+            # Create metadata with specific upload date
             metadata_id = self.create_audio_metadata(
                 user_id=user_id,
                 filename=file["name"],
                 file_size=file["size"],
                 duration=file["duration"],
-                sample_rate=file["sample_rate"]
+                sample_rate=file["sample_rate"],
+                upload_timestamp=file["date"]
             )
-            
-            # Create analysis result
-            is_fake = file["name"] == "interview_clip.mp3" or file["name"] == "podcast_segment.wav"
-            confidence = 0.95 if is_fake else 0.92
+              # Create analysis result
+            is_fake = file["is_fake"]
+            confidence = file["confidence"]
             features = ["mfcc", "spectral_centroid", "zero_crossing_rate", "spectral_rolloff"]
             
             analysis_id = self.create_analysis_result(
                 metadata_id=metadata_id,
                 is_deepfake=is_fake,
                 confidence_score=confidence,
-                features_used=features
+                features_used=features,
+                analysis_timestamp=file["date"]  # Use the same date for both metadata and analysis
             )
             
             # Create result details
