@@ -1,45 +1,36 @@
 import os
 import sys
+import json
+import tempfile
+import requests
+from pathlib import Path
+from typing import List
+from dotenv import load_dotenv
+
 from fastapi import FastAPI, File, UploadFile, Depends, HTTPException, Form
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-import tempfile
-from pathlib import Path
+from fastapi.security import OAuth2PasswordBearer
 
 # Add the parent directory to system path to enable relative imports
 current_dir = Path(__file__).parent
 sys.path.insert(0, str(current_dir))
 
-# Import firebase configuration first with error handling
-try:
-    from services.firebase_config import initialize_firebase
-    from firebase_admin import auth, firestore
-    print("Firebase import successful")
-except Exception as e:
-    print(f"Error importing Firebase modules: {e}")
-    print("Continuing without Firebase functionality...")
+# Import Firebase configuration and services
+from services.firebase_config import initialize_firebase
+from firebase_admin import auth, firestore
 
-# Import the detect_deepfake function from the core package
+# Import deepfake detection functionality
 from core.detect_deepfake import detect_deepfake
 
-# Import models for user authentication
+# Import data models
 from models.models import UserSignUp, UserLogin
-from fastapi.security import OAuth2PasswordBearer
-import requests
-import json
-from typing import List
 
 # Initialize the FastAPI app
 app = FastAPI()
 
-# Initialize Firebase with error handling
-try:
-    initialize_firebase()
-    print("Firebase initialized successfully")
-except Exception as e:
-    print(f"Error initializing Firebase: {e}")
-    print("Continuing without Firebase functionality...")
+# Initialize Firebase
+initialize_firebase()
 
 # Configure CORS middleware
 app.add_middleware(
@@ -50,30 +41,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Load environment variables from .env file
+
+# Load .env file
+load_dotenv()
+
 # Firebase Web API Key - get from environment variable
 FIREBASE_WEB_API_KEY = os.getenv("FIREBASE_WEB_API_KEY")
 
-# For development purposes, use a default key if not set in environment
+# Check if the API key is available
 if not FIREBASE_WEB_API_KEY:
     print("WARNING: FIREBASE_WEB_API_KEY environment variable is not set!")
-    print("Using default key from run_server.bat for development purposes.")
-    # Check if we can read the key from run_server.bat as a fallback
-    try:
-        run_server_path = os.path.join(os.path.dirname(__file__), "run_server.bat")
-        if os.path.exists(run_server_path):
-            with open(run_server_path, "r") as f:
-                bat_content = f.read()
-                import re
-                key_match = re.search(r'set FIREBASE_WEB_API_KEY=([^\r\n]+)', bat_content)
-                if key_match:
-                    FIREBASE_WEB_API_KEY = key_match.group(1)
-                    print(f"Found key in run_server.bat")
-    except Exception as e:
-        print(f"Error reading from run_server.bat: {e}")
-    
-    if not FIREBASE_WEB_API_KEY:
-        print("WARNING: Using a dummy key. Authentication features will not work!")
-        FIREBASE_WEB_API_KEY = "dummy-key-authentication-features-will-not-work"
+    print("Please create a .env file with your FIREBASE_WEB_API_KEY")
+    raise ValueError("FIREBASE_WEB_API_KEY environment variable must be set")
 
 # Configure OAuth2
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
@@ -188,7 +168,6 @@ async def verify_token(authorization: str = Depends(oauth2_scheme)):
 @app.get("/protected")
 async def protected_route(token_data=Depends(verify_token)):
     return {"message": "This is a protected route", "user_id": token_data["uid"]}
-
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
