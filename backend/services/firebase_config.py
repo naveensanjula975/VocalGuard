@@ -1,5 +1,5 @@
 import firebase_admin
-from firebase_admin import credentials, auth
+from firebase_admin import credentials, auth, db
 import os
 from pathlib import Path
 from dotenv import load_dotenv
@@ -35,9 +35,15 @@ def initialize_firebase():
             if service_account_path is None:
                 raise FileNotFoundError(f"serviceAccountKey.json not found in any of the expected locations")
             
+            # Get database URL from environment variable or use default
+            database_url = os.getenv("FIREBASE_DATABASE_URL", "https://vocalguard-default-rtdb.firebaseio.com/")
+            
+            # Initialize Firebase app with database URL
             cred = credentials.Certificate(str(service_account_path))
-            firebase_admin.initialize_app(cred)
-            print("Firebase initialized successfully")
+            firebase_admin.initialize_app(cred, {
+                'databaseURL': database_url
+            })
+            print("Firebase initialized successfully with Realtime Database")
         except Exception as e:
             print(f"Firebase initialization error: {e}")
             raise

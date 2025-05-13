@@ -2,7 +2,10 @@ import os
 import sys
 import torch
 import numpy as np
+import librosa
+import time
 from pathlib import Path
+import uuid
 
 # Add the parent directory to system path to enable relative imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -10,6 +13,10 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 # Updated relative imports
 from models.models import DeepFakeDetector
 from core.feature_extraction import extract_features
+from services.database_service import DatabaseService
+
+# Model version for tracking
+MODEL_VERSION = "1.0.0"
 
 def load_model(model_path=None):
     """
@@ -23,17 +30,27 @@ def load_model(model_path=None):
     model.eval()
     return model
 
-def detect_deepfake(audio_path):
+def detect_deepfake(audio_path, user_id=None, store_results=True):
     """
-    Detect if an audio file is a deepfake
+    Detect if an audio file is a deepfake and optionally store results in Firebase
     
     Args:
         audio_path: Path to the audio file
+        user_id: Optional user ID to associate with the analysis
+        store_results: Whether to store results in Firebase database
         
     Returns:
-        dict: Results including probability of being fake and classification
+        dict: Results including probability of being fake, classification, and analysis IDs
     """
+    start_time = time.time()
+    
     try:
+        # Get audio information
+        y, sr = librosa.load(audio_path, sr=None)
+        duration = librosa.get_duration(y=y, sr=sr)
+        file_size = os.path.getsize(audio_path)
+        filename = os.path.basename(audio_path)
+        
         # Extract features from audio
         features = extract_features(audio_path)
         
@@ -47,11 +64,71 @@ def detect_deepfake(audio_path):
         with torch.no_grad():
             prediction = model(features_tensor).item()
         
+        is_fake = prediction > 0.5
+        confidence = float(abs(prediction - 0.5) * 2)
+        
+        # Calculate processing time
+        processing_time = (time.time() - start_time) * 1000  # in milliseconds
+        
         result = {
             "probability": float(prediction),
-            "is_fake": prediction > 0.5,
-            "confidence": float(abs(prediction - 0.5) * 2)
+            "is_fake": is_fake,
+            "confidence": confidence
         }
+        
+        # Store results in Firebase if requested and user_id is provided
+        if store_results and user_id:
+            db_service = DatabaseService()
+            
+            # Store audio metadata
+            metadata_id = db_service.create_audio_metadata(
+                user_id=user_id,
+                filename=filename,
+                file_size=file_size,
+                duration=duration,
+                sample_rate=sr
+            )
+            
+            # Feature names used in analysis
+            features_used = ["mfcc", "spectral_centroid", "spectral_rolloff", "zero_crossing_rate"]
+            
+            # Store analysis result
+            analysis_id = db_service.create_analysis_result(
+                metadata_id=metadata_id,
+                is_deepfake=is_fake,
+                confidence_score=confidence,
+                features_used=features_used
+            )
+            
+            # Calculate feature-specific scores from the extracted features
+            # In a real system, these would come from the model's internals
+            # Here we're creating reasonable dummy values
+            mfcc_features = features[:80]  # First 80 values are MFCC-related
+            spectral_features = features[80:]  # Remaining features are spectral
+            
+            mfcc_score = np.mean(mfcc_features) if is_fake else 1 - np.mean(mfcc_features)
+            spectral_score = np.mean(spectral_features) if is_fake else 1 - np.mean(spectral_features)
+            
+            feature_scores = {
+                "mfcc_score": float(mfcc_score),
+                "spectral_score": float(spectral_score),
+                "overall_score": float(prediction if is_fake else 1 - prediction)
+            }
+            
+            # Store detailed results
+            details_id = db_service.create_result_details(
+                analysis_id=analysis_id,
+                feature_scores=feature_scores,
+                model_version=MODEL_VERSION,
+                processing_time=processing_time
+            )
+            
+            # Add IDs to the result
+            result.update({
+                "metadata_id": metadata_id,
+                "analysis_id": analysis_id,
+                "details_id": details_id
+            })
         
         return result
     

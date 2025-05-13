@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
+from typing import List, Dict, Optional, Union
+import datetime
 
 # User authentication models
 class UserSignUp(BaseModel):
@@ -11,6 +13,51 @@ class UserSignUp(BaseModel):
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+
+# Audio Metadata models
+class AudioMetadataCreate(BaseModel):
+    filename: str
+    file_size: int
+    duration: float
+    sample_rate: int
+
+class AudioMetadata(AudioMetadataCreate):
+    id: str
+    user_id: str
+    upload_timestamp: str
+
+# Analysis models
+class AnalysisResultCreate(BaseModel):
+    metadata_id: str
+    is_deepfake: bool
+    confidence_score: float
+    features_used: List[str]
+
+class AnalysisResult(AnalysisResultCreate):
+    id: str
+    analysis_timestamp: str
+
+# Result Details models
+class ResultDetailsCreate(BaseModel):
+    analysis_id: str
+    feature_scores: Dict[str, float]
+    model_version: str
+    processing_time: float
+
+class ResultDetails(ResultDetailsCreate):
+    id: str
+    created_at: str
+
+# Combined model for API responses
+class CompleteAnalysis(BaseModel):
+    id: str
+    metadata_id: str
+    is_deepfake: bool
+    confidence_score: float
+    features_used: List[str]
+    analysis_timestamp: str
+    metadata: Optional[AudioMetadata] = None
+    details: Optional[ResultDetails] = None
     
 # DeepFake detection model
 class DeepFakeDetector(nn.Module):

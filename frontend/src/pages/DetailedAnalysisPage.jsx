@@ -1,52 +1,150 @@
-import React from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import DetailedAnalysis from "../components/DetailedAnalysis";
+import { useAuth } from "../context/AuthContext";
+import { api } from "../services/api";
 
 const DetailedAnalysisPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const analysisData = location.state?.analysisData || {
-    fileName: "sample_audio.mp3",
-    date: "Feb 7, 2025",
-    duration: "2:45",
-    format: "MP3",
-    sampleRate: "44.1 kHz",
-    isAI: false,
-    confidence: 98,
-    analysisTime: "2450",
-    details: [
-      {
-        label: "Voice Pattern Analysis",
-        value: "Natural",
-        description: "Patterns match typical human speech characteristics",
-      },
-      {
-        label: "Frequency Analysis",
-        value: "Normal",
-        description: "Frequency distribution within expected human range",
-      },
-      {
-        label: "Background Noise",
-        value: "Low",
-        description: "Minimal background noise detected",
-      },
-      {
-        label: "Speech Clarity",
-        value: "High",
-        description: "Clear and distinct speech patterns",
-      },
-    ],
-  };
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  if (!location.state?.analysisData) {
-    // If no data is passed, redirect to history page
+  // Use either the data passed through location state or fetch it from API
+  const [analysisData, setAnalysisData] = useState(
+    location.state?.analysisData || null
+  );
+
+  // Get analysis ID from URL if available
+  const { id } = useParams();
+
+  useEffect(() => {
+    const fetchAnalysisData = async () => {
+      // If we already have data from location state, skip fetching
+      if (location.state?.analysisData || !id || !user?.token) return;
+
+      setLoading(true);
+      try {
+        const data = await api.getAnalysisById(id, user.token);
+
+        if (!data) {
+          setError("Analysis not found");
+          setLoading(false);
+          return;
+        }
+
+        // Format the data to match the component's expected format
+        const uploadDate = new Date(data.analysis_timestamp);
+        const formattedDate = uploadDate.toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        });
+
+        // Format the result string
+        const resultText = data.is_deepfake
+          ? `${Math.round(data.confidence_score * 100)}% Fake`
+          : `${Math.round((1 - data.confidence_score) * 100)}% Real`;
+
+        // Extract audio details
+        const detailsArray = [];
+
+        // If we have feature details, add them
+        if (data.details && data.details.feature_scores) {
+          const features = data.details.feature_scores;
+
+          if (features.mfcc_score !== undefined) {
+            detailsArray.push({
+              label: "Voice Pattern Analysis",
+              value: features.mfcc_score > 0.5 ? "Artificial" : "Natural",
+              description:
+                features.mfcc_score > 0.5
+                  ? "Patterns indicate potential AI generation"
+                  : "Patterns match typical human speech characteristics",
+            });
+          }
+
+          if (features.spectral_score !== undefined) {
+            detailsArray.push({
+              label: "Frequency Analysis",
+              value: features.spectral_score > 0.5 ? "Abnormal" : "Normal",
+              description:
+                features.spectral_score > 0.5
+                  ? "Unusual frequency distribution detected"
+                  : "Frequency distribution within expected human range",
+            });
+          }
+        }
+
+        // Add default details if none available from API
+        if (detailsArray.length === 0) {
+          detailsArray.push({
+            label: "Overall Analysis",
+            value: data.is_deepfake ? "Artificial" : "Natural",
+            description: data.is_deepfake
+              ? "AI patterns detected in the audio"
+              : "Natural human voice characteristics detected",
+          });
+        }
+
+        const formattedData = {
+          id: data.id,
+          date: formattedDate,
+          fileName: data.metadata ? data.metadata.filename : "Unknown File",
+          result: resultText,
+          isAI: data.is_deepfake,
+          confidence: Math.round(data.confidence_score * 100),
+          duration: data.metadata
+            ? `${data.metadata.duration.toFixed(2)}s`
+            : "Unknown",
+          format: data.metadata
+            ? data.metadata.filename.split(".").pop().toUpperCase()
+            : "Unknown",
+          sampleRate: data.metadata
+            ? `${(data.metadata.sample_rate / 1000).toFixed(1)} kHz`
+            : "Unknown",
+          analysisTime: data.details
+            ? data.details.processing_time.toFixed(0)
+            : "Unknown",
+          details: detailsArray,
+          rawData: data, // Keep the raw data for reference
+        };
+
+        setAnalysisData(formattedData);
+      } catch (err) {
+        console.error("Error fetching analysis:", err);
+        setError("Failed to load analysis details");
+      }
+      setLoading(false);
+    };
+
+    fetchAnalysisData();
+  }, [id, user, location.state]);
+
+  // If we don't have data and we're not currently loading, redirect to history page
+  if (!analysisData && !loading && !error) {
     navigate("/history");
     return null;
   }
-
   return (
     <div>
-      <DetailedAnalysis analysisData={analysisData} />
+      {loading ? (
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-700"></div>
+        </div>
+      ) : error ? (
+        <div className="max-w-3xl mx-auto my-12 p-8 bg-red-50 rounded-lg text-center">
+          <p className="text-red-600 text-lg">{error}</p>
+          <button
+            onClick={() => navigate("/history")}
+            className="mt-4 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors">
+            Return to History
+          </button>
+        </div>
+      ) : analysisData ? (
+        <DetailedAnalysis analysisData={analysisData} />
+      ) : null}
     </div>
   );
 };

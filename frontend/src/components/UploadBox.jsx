@@ -123,7 +123,6 @@ const UploadBox = () => {
       ],
     };
   };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!file) {
@@ -131,10 +130,58 @@ const UploadBox = () => {
       return;
     }
 
+    if (!user || !user.token) {
+      setError("You must be logged in to analyze audio");
+      return;
+    }
+
     setIsUploading(true);
     setUploadProgress(0);
     setUploadStatus("Starting upload...");
-    simulateProgress();
+
+    try {
+      // Create form data
+      const formData = new FormData();
+      formData.append("file", file);
+
+      // Start progress simulation
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += Math.random() * 10;
+        if (progress >= 95) {
+          progress = 95; // Cap at 95% until we get actual response
+        }
+        setUploadProgress(Math.min(progress, 95));
+        setUploadStatus(getStatusMessage(progress));
+      }, 500);
+
+      // Make actual API call
+      const result = await api.detectDeepfake(formData, user.token);
+
+      // Stop progress simulation
+      clearInterval(interval);
+      setUploadProgress(100);
+      setUploadStatus("Complete!");
+
+      // Add file details to the result
+      const enhancedResult = {
+        ...result,
+        fileName: file.name,
+        fileSize: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
+        format: file.type.split("/")[1].toUpperCase(),
+        timestamp: new Date().toISOString(),
+      };
+
+      // Navigate to result page with real data
+      setTimeout(() => {
+        setIsUploading(false);
+        navigate("/result", { state: { result: enhancedResult } });
+      }, 500);
+    } catch (err) {
+      console.error("Error analyzing audio:", err);
+      setError(err.message || "Failed to analyze audio");
+      setIsUploading(false);
+    }
   };
 
   return (
