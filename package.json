@@ -1,0 +1,14 @@
+{
+  "name": "vocalguard",
+  "version": "1.0.0",
+  "description": "This project is an AI-based web application for detecting audio deepfakes. It uses Flask for the backend, React for the frontend, and TensorFlow for the machine learning model.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+  
+}
+
