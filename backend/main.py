@@ -211,7 +211,7 @@ async def get_analysis_by_id(analysis_id: str, token_data=Depends(verify_token))
     """
     try:
         db_service = DatabaseService()
-        analysis = db_service.get_analysis(analysis_id)
+        analysis = db_service.get_analysis_by_id(analysis_id)
         
         if not analysis:
             raise HTTPException(status_code=404, detail="Analysis not found")

@@ -46,7 +46,9 @@ export const api = {
         } catch (error) {
             throw error;
         }
-    }, detectDeepfake: async (formData, token) => {
+    },
+
+    detectDeepfake: async (formData, token) => {
         try {
             const response = await fetch(`${API_BASE_URL}/detect-deepfake/`, {
                 method: 'POST',
@@ -143,5 +145,47 @@ export const api = {
         } catch (error) {
             throw new Error(error.message || 'Network error');
         }
+    },
+
+    deleteAnalyses: async (analysisIds, token) => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/analyses/delete`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ analysis_ids: analysisIds }),
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || 'Failed to delete analyses');
+            }
+
+            return response.json();
+        } catch (error) {
+            throw new Error(error.message || 'Network error');
+        }
+    },
+
+    deleteAnalysis: async (analysisId, token) => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/analyses/${analysisId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || 'Failed to delete analysis');
+            }
+
+            return response.json();
+        } catch (error) {
+            throw new Error(error.message || 'Network error');
+        }
     }
-}; 
+};

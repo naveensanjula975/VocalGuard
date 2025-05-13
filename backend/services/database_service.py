@@ -238,3 +238,61 @@ class DatabaseService:
             analysis_ids.append(analysis_id)
         
         return analysis_ids
+        
+    def delete_analysis(self, analysis_id: str) -> bool:
+        """
+        Delete an analysis and all related data (metadata and details)
+        
+        Args:
+            analysis_id: ID of the analysis to delete
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            # First, get the analysis to determine the metadata ID
+            analysis = self.db_ref.child('analysis_results').child(analysis_id).get()
+            
+            if not analysis:
+                return False
+                
+            metadata_id = analysis.get('metadata_id')
+            
+            # Delete related details
+            details_query = self.db_ref.child('result_details').order_by_child('analysis_id').equal_to(analysis_id).get()
+            if details_query:
+                for detail_id in details_query:
+                    self.db_ref.child('result_details').child(detail_id).delete()
+            
+            # Delete the analysis result
+            self.db_ref.child('analysis_results').child(analysis_id).delete()
+            
+            # Check if there are any other analyses using this metadata
+            other_analyses = self.db_ref.child('analysis_results').order_by_child('metadata_id').equal_to(metadata_id).get()
+            
+            # If no other analyses reference this metadata, delete the metadata too
+            if not other_analyses and metadata_id:
+                self.db_ref.child('audio_metadata').child(metadata_id).delete()
+                
+            return True
+            
+        except Exception as e:
+            print(f"Error deleting analysis: {str(e)}")
+            return False
+            
+    def delete_multiple_analyses(self, analysis_ids: List[str]) -> Dict[str, bool]:
+        """
+        Delete multiple analyses and their related data
+        
+        Args:
+            analysis_ids: List of analysis IDs to delete
+            
+        Returns:
+            dict: Map of analysis ID to success/failure
+        """
+        results = {}
+        
+        for analysis_id in analysis_ids:
+            results[analysis_id] = self.delete_analysis(analysis_id)
+            
+        return results

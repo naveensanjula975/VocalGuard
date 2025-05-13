@@ -107,60 +107,51 @@ const HistoryPage = () => {
         // Safely get values with fallbacks
         const metadata = analysis.metadata || {};
         const details = analysis.details || {};
-        let processingTime = null;
+        let processingTime = null;      // Handle processing time with proper type checking and error handling
+      if (details.processing_time !== undefined) {
+        try {
+          if (typeof details.processing_time === "string") {
+            processingTime = parseInt(details.processing_time);
+          } else if (typeof details.processing_time === "number") {
+            processingTime = details.processing_time;
+          }
 
-        // Handle processing time with proper type checking and error handling
-        if (details.processing_time !== undefined) {
-          try {
-            if (typeof details.processing_time === "string") {
-              processingTime = parseInt(details.processing_time);
-            } else if (typeof details.processing_time === "number") {
-              processingTime = details.processing_time;
-            }
-
-            if (isNaN(processingTime)) {
-              processingTime = null;
-            }
-          } catch (e) {
-            console.error("Error parsing processing time:", e);
+          if (isNaN(processingTime)) {
             processingTime = null;
           }
+        } catch (e) {
+          console.error("Error parsing processing time:", e);
+          processingTime = null;
         }
-
-        // For demo data detection - demo data often has a specific pattern
-        const isDemoData =
-          metadata.filename &&
-          [
-            "speech_sample_1.wav",
-            "interview_clip.mp3",
-            "voice_message.m4a",
-            "podcast_segment.wav",
-          ].includes(metadata.filename);
-
-        return {
-          id: analysis.id,
-          date: formattedDate,
-          fileName: metadata.filename || "Unknown File",
-          result: resultText,
-          isAI: analysis.is_deepfake,
-          confidence: Math.round(confidence * 100),
-          duration: metadata.duration
-            ? `${parseFloat(metadata.duration).toFixed(2)}s`
+      }
+      
+      // For demo data detection - demo data often has a specific pattern
+      const isDemoData = metadata.filename && 
+                        ["speech_sample_1.wav", "interview_clip.mp3", 
+                         "voice_message.m4a", "podcast_segment.wav"].includes(metadata.filename);      return {
+        id: analysis.id,
+        date: formattedDate,
+        fileName: metadata.filename || "Unknown File",
+        result: resultText,
+        isAI: analysis.is_deepfake,
+        confidence: Math.round(confidence * 100),
+        duration: metadata.duration
+          ? `${parseFloat(metadata.duration).toFixed(2)}s`
+          : "Unknown",
+        format: metadata.filename
+          ? metadata.filename.split(".").pop().toUpperCase()
+          : "Unknown",
+        sampleRate: metadata.sample_rate
+          ? `${(parseFloat(metadata.sample_rate) / 1000).toFixed(1)} kHz`
+          : "Unknown",
+        analysisTime:
+          processingTime !== null
+            ? `${processingTime.toFixed(0)} ms`
             : "Unknown",
-          format: metadata.filename
-            ? metadata.filename.split(".").pop().toUpperCase()
-            : "Unknown",
-          sampleRate: metadata.sample_rate
-            ? `${(parseFloat(metadata.sample_rate) / 1000).toFixed(1)} kHz`
-            : "Unknown",
-          analysisTime:
-            processingTime !== null
-              ? `${processingTime.toFixed(0)} ms`
-              : "Unknown",
-          details: detailsArray,
-          isDemoData: isDemoData, // Flag demo data for special UI treatment
-          rawData: analysis, // Keep the raw data for reference
-        };
+        details: detailsArray,
+        isDemoData: isDemoData, // Flag demo data for special UI treatment
+        rawData: analysis, // Keep the raw data for reference
+      };
       })
       .filter(Boolean); // Remove any null entries
   };
@@ -270,7 +261,6 @@ const HistoryPage = () => {
       navigate("/detailed-analysis", { state: { analysisData: item } });
     }
   };
-
   const handleGenerateDemoData = async () => {
     setLoading(true);
     setError(null);
@@ -279,16 +269,16 @@ const HistoryPage = () => {
       // Generate demo data
       const result = await api.generateDummyData(user.token);
       console.log("Demo data generated:", result);
-
+      
       // Show the number of generated analyses
       const generatedCount = result.analysis_ids?.length || 0;
-
+      
       // Wait a moment for Firebase to update
       setTimeout(async () => {
         try {
           // Fetch the updated analyses
           const response = await api.getUserAnalyses(user.token);
-
+  
           if (response.analyses && Array.isArray(response.analyses)) {
             // Transform API data to match our component's expected format
             const formattedData = formatAnalysisData(response.analyses);
@@ -297,10 +287,7 @@ const HistoryPage = () => {
           }
           setLoading(false);
         } catch (fetchErr) {
-          console.error(
-            "Error fetching analyses after demo generation:",
-            fetchErr
-          );
+          console.error("Error fetching analyses after demo generation:", fetchErr);
           setError("Generated demo data but failed to refresh the display");
           setLoading(false);
         }
@@ -436,8 +423,7 @@ const HistoryPage = () => {
       {loading ? (
         <div className="flex justify-center items-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-700"></div>
-        </div>
-      ) : error ? (
+        </div>      ) : error ? (
         <div className="bg-red-50 p-4 rounded-lg text-center text-red-500">
           <p>{error}</p>
           {!user && (
@@ -467,143 +453,130 @@ const HistoryPage = () => {
       ) : (
         <div>
           {/* Demo Data Information Banner */}
-          {historyData.some((item) => item.isDemoData) && (
+          {historyData.some(item => item.isDemoData) && (
             <div className="mb-4 bg-purple-50 border border-purple-200 rounded-lg p-4">
               <div className="flex items-center">
-                <svg
-                  className="w-5 h-5 text-purple-600 mr-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
+                <svg className="w-5 h-5 text-purple-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <span className="text-purple-800 font-medium">Demo Data</span>
               </div>
               <p className="mt-1 text-sm text-purple-700">
-                This table includes demonstration data for showcasing
-                VocalGuard's audio analysis capabilities. Demo entries are
-                marked with a "Demo" badge.
+                This table includes demonstration data for showcasing VocalGuard's audio analysis capabilities.
+                Demo entries are marked with a "Demo" badge.
               </p>
             </div>
           )}
-
           <div className="bg-white rounded-lg shadow overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="min-w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="w-10 px-3 py-3 text-left">
+          <div className="overflow-x-auto">
+            <table className="min-w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="w-10 px-3 py-3 text-left">
+                    <input
+                      type="checkbox"
+                      checked={
+                        selectedItems.length === filteredHistory.length &&
+                        filteredHistory.length > 0
+                      }
+                      onChange={handleSelectAll}
+                      className="rounded text-purple-600 focus:ring-purple-500"
+                    />
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Date
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Filename
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Result
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Format
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Duration
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredHistory.map((item, index) => (
+                  <tr
+                    key={item.id || index}
+                    className={`hover:bg-purple-50 transition-colors ${
+                      selectedItems.includes(item.id) ? "bg-purple-50" : ""
+                    }`}>
+                    <td className="px-3 py-4">
                       <input
                         type="checkbox"
-                        checked={
-                          selectedItems.length === filteredHistory.length &&
-                          filteredHistory.length > 0
-                        }
-                        onChange={handleSelectAll}
+                        checked={selectedItems.includes(item.id)}
+                        onChange={() => handleItemSelect(item.id)}
                         className="rounded text-purple-600 focus:ring-purple-500"
                       />
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Date
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Filename
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Result
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Format
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Duration
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredHistory.map((item, index) => (
-                    <tr
-                      key={item.id || index}
-                      className={`hover:bg-purple-50 transition-colors ${
-                        selectedItems.includes(item.id) ? "bg-purple-50" : ""
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {item.date}
+                    </td>                    <td className="px-4 py-4 text-sm text-blue-600 max-w-[15rem] truncate">
+                      <div className="flex items-center">
+                        {item.fileName}
+                        {item.isDemoData && (
+                          <span className="ml-2 px-1.5 py-0.5 text-xs font-medium bg-purple-100 text-purple-800 rounded">
+                            Demo
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td
+                      className={`px-4 py-4 whitespace-nowrap text-sm font-medium ${
+                        item.isAI ? "text-red-500" : "text-green-500"
                       }`}>
-                      <td className="px-3 py-4">
-                        <input
-                          type="checkbox"
-                          checked={selectedItems.includes(item.id)}
-                          onChange={() => handleItemSelect(item.id)}
-                          className="rounded text-purple-600 focus:ring-purple-500"
-                        />
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {item.date}
-                      </td>
-                      <td className="px-4 py-4 text-sm text-blue-600 max-w-[15rem] truncate">
-                        <div className="flex items-center">
-                          {item.fileName}
-                          {item.isDemoData && (
-                            <span className="ml-2 px-1.5 py-0.5 text-xs font-medium bg-purple-100 text-purple-800 rounded">
-                              Demo
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td
-                        className={`px-4 py-4 whitespace-nowrap text-sm font-medium ${
-                          item.isAI ? "text-red-500" : "text-green-500"
-                        }`}>
-                        <div className="flex items-center">
-                          <span
-                            className={`inline-block w-2 h-2 rounded-full mr-2 ${
-                              item.isAI ? "bg-red-500" : "bg-green-500"
-                            }`}></span>
-                          {item.result}
-                        </div>
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {item.format}
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {item.duration}
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button
-                          onClick={() => handleViewDetails(item)}
-                          className="text-purple-600 hover:text-purple-900 mx-2 flex items-center">
-                          <svg
-                            className="w-5 h-5 mr-1"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24">
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth="2"
-                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                            />
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth="2"
-                              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                            />
-                          </svg>
-                          View Details
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                      <div className="flex items-center">
+                        <span
+                          className={`inline-block w-2 h-2 rounded-full mr-2 ${
+                            item.isAI ? "bg-red-500" : "bg-green-500"
+                          }`}></span>
+                        {item.result}
+                      </div>
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">
+                      {item.format}
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">
+                      {item.duration}
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <button
+                        onClick={() => handleViewDetails(item)}
+                        className="text-purple-600 hover:text-purple-900 mx-2 flex items-center">
+                        <svg
+                          className="w-5 h-5 mr-1"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24">
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                          />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                          />
+                        </svg>
+                        View Details
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
