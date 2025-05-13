@@ -14,7 +14,8 @@ class DatabaseService:
         self.db_ref = db.reference('/')
         
     def create_audio_metadata(self, user_id: str, filename: str, file_size: int, 
-                             duration: float, sample_rate: int) -> str:
+                             duration: float, sample_rate: int, channels: int = 2, 
+                             bit_depth: str = "16 bits") -> str:
         """
         Store metadata about an uploaded audio file
         
@@ -24,6 +25,8 @@ class DatabaseService:
             file_size: Size of the file in bytes
             duration: Duration of the audio in seconds
             sample_rate: Sample rate of the audio
+            channels: Number of audio channels (default: 2)
+            bit_depth: Bit depth of the audio (default: "16 bits")
             
         Returns:
             str: ID of the created record
@@ -37,6 +40,8 @@ class DatabaseService:
             'file_size': file_size,
             'duration': duration,
             'sample_rate': sample_rate,
+            'channels': channels,
+            'bit_depth': bit_depth,
             'upload_timestamp': datetime.datetime.now().isoformat(),
         }
         

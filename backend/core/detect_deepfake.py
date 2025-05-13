@@ -69,8 +69,7 @@ def detect_deepfake(audio_path, user_id=None, store_results=True):
         
         # Calculate processing time
         processing_time = (time.time() - start_time) * 1000  # in milliseconds
-        
-        result = {
+          result = {
             "probability": float(prediction),
             "is_fake": is_fake,
             "confidence": confidence
@@ -80,13 +79,30 @@ def detect_deepfake(audio_path, user_id=None, store_results=True):
         if store_results and user_id:
             db_service = DatabaseService()
             
-            # Store audio metadata
+            # Store audio metadata with more details about the audio file
+            channels = 1  # Default for librosa.load
+            bit_depth = "16 bits"  # Typical for audio files
+            
+            try:
+                # Try to get more audio info if available
+                channels = y.shape[1] if len(y.shape) > 1 else 1
+            except:
+                pass
+                
+            # Get bit depth based on file extension
+            if filename.lower().endswith('.wav'):
+                bit_depth = "16 bits"  # Typical for WAV
+            elif filename.lower().endswith('.flac'):
+                bit_depth = "24 bits"  # Typical for FLAC
+            
             metadata_id = db_service.create_audio_metadata(
                 user_id=user_id,
                 filename=filename,
                 file_size=file_size,
                 duration=duration,
-                sample_rate=sr
+                sample_rate=sr,
+                channels=channels,
+                bit_depth=bit_depth
             )
             
             # Feature names used in analysis

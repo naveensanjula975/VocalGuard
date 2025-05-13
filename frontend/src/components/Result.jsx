@@ -221,11 +221,14 @@ const Result = ({ result: propResult }) => {
                           result.confidence ? result.confidence * 100 : 0
                         }%`,
                       }}></div>
-                  </div>
+                  </div>{" "}
                   <p className="mt-2 text-sm text-gray-500">
                     Confidence:{" "}
-                    {result.confidence
-                      ? `${Math.round(result.confidence * 100)}%`
+                    {result.confidence !== undefined
+                      ? typeof result.confidence === "number" &&
+                        result.confidence <= 1
+                        ? `${Math.round(result.confidence * 100)}%`
+                        : `${Math.round(result.confidence)}%`
                       : "N/A"}
                   </p>
                 </div>
@@ -237,17 +240,19 @@ const Result = ({ result: propResult }) => {
                   }`}>
                   {result.is_fake ? "AI Generated" : "Human Voice"}
                 </div>
-              </div>
-
-              {/* Analysis IDs - Useful for debugging */}
+              </div>{" "}
+              {/* Analysis IDs - Show for logged-in users and for debugging */}
               {(result.metadata_id || result.analysis_id) && (
                 <div className="mt-3 text-xs text-gray-400">
-                  {result.metadata_id && (
-                    <p>Metadata ID: {result.metadata_id}</p>
-                  )}
-                  {result.analysis_id && (
-                    <p>Analysis ID: {result.analysis_id}</p>
-                  )}
+                  <p>
+                    Analysis Reference:{" "}
+                    {result.analysis_id
+                      ? result.analysis_id.substring(0, 8) + "..."
+                      : "Not stored yet"}
+                  </p>
+                  <p className="text-xs text-gray-300">
+                    You can access this analysis later from your history page.
+                  </p>
                 </div>
               )}
             </div>

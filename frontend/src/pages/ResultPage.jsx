@@ -29,7 +29,6 @@ export default function ResultPage() {
       setLoading(true);
       try {
         const data = await api.getAnalysisById(id, user.token);
-
         if (data) {
           // Format API data to match component expectations
           const formattedResult = {
@@ -46,8 +45,14 @@ export default function ResultPage() {
             sampleRate: data.metadata?.sample_rate
               ? `${(data.metadata.sample_rate / 1000).toFixed(1)} kHz`
               : "Unknown",
+            bitDepth: "16 bits", // Default for most audio files
+            channels: "2 (Stereo)", // Default assumption
+
+            // For component compatibility, need both is_fake and isAI properties
             is_fake: data.is_deepfake,
-            confidence: data.confidence_score,
+            isAI: data.is_deepfake,
+
+            confidence: data.confidence_score * 100, // Convert to percentage
             probability: data.is_deepfake
               ? data.confidence_score
               : 1 - data.confidence_score,

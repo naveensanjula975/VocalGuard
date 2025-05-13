@@ -129,9 +129,12 @@ const HistoryPage = () => {
     return "text-green-500";
   };
   const handleViewDetails = (item) => {
-    // Use the direct route if we have the ID, otherwise pass state
+    // Use the direct route with the ID, which will properly update the URL
+    // This allows users to bookmark or share the result directly
     if (item.id) {
       navigate(`/result/${item.id}`);
+    } else if (item.analysis_id) {
+      navigate(`/result/${item.analysis_id}`);
     } else {
       navigate("/detailed-analysis", { state: { analysisData: item } });
     }

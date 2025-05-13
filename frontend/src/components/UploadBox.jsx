@@ -161,25 +161,55 @@ const UploadBox = () => {
       // Stop progress simulation
       clearInterval(interval);
       setUploadProgress(100);
-      setUploadStatus("Complete!");
-
-      // Add file details to the result
+      setUploadStatus("Complete!"); // Enhance result with local file details and Firebase IDs
       const enhancedResult = {
         ...result,
         fileName: file.name,
         fileSize: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
         format: file.type.split("/")[1].toUpperCase(),
         timestamp: new Date().toISOString(),
+
+        // Use Firebase IDs directly from API response for history linking
+        metadata_id: result.metadata_id,
+        analysis_id: result.analysis_id,
+        details_id: result.details_id,
+
+        // Transform Firebase results for component compatibility
+        is_fake: result.is_fake,
+        confidence: result.confidence * 100,
       };
+
+      console.log("Analysis complete, result:", enhancedResult);
 
       // Navigate to result page with real data
       setTimeout(() => {
         setIsUploading(false);
-        navigate("/result", { state: { result: enhancedResult } });
+        if (enhancedResult.analysis_id) {
+          // If we have an analysis ID, use the direct route for better history integration
+          navigate(`/result/${enhancedResult.analysis_id}`, {
+            state: { result: enhancedResult },
+          });
+        } else {
+          navigate("/result", { state: { result: enhancedResult } });
+        }
       }, 500);
     } catch (err) {
       console.error("Error analyzing audio:", err);
-      setError(err.message || "Failed to analyze audio");
+
+      // Clear the progress simulation
+      clearInterval(interval);
+
+      // Show specific error messages to help the user troubleshoot
+      if (err.message && err.message.includes("401")) {
+        setError("Authentication error. Please login again.");
+      } else if (err.message && err.message.includes("413")) {
+        setError("File too large. Please choose a smaller audio file.");
+      } else if (err.message && err.message.includes("network")) {
+        setError("Network error. Please check your connection and try again.");
+      } else {
+        setError(err.message || "Failed to analyze audio");
+      }
+
       setIsUploading(false);
     }
   };
