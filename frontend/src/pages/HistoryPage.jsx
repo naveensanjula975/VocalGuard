@@ -10,73 +10,9 @@ const HistoryPage = () => {
   const [error, setError] = useState(null);
   const [selectedItems, setSelectedItems] = useState([]);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
-
-  // Static demo data for preview
-  const staticDemoData = [
-    {
-      id: "demo-1",
-      date: "Feb 7, 2025, 02:15 PM",
-      fileName: "audio_clip_10.wav",
-      result: "97% Real",
-      isAI: false,
-      confidence: 97,
-      duration: "15.30s",
-      format: "WAV",
-      sampleRate: "44.1 kHz",
-      analysisTime: "1250 ms",
-      isDemoData: true,
-      details: [
-        {
-          label: "Voice Pattern Analysis",
-          value: "Natural",
-          description: "Patterns match typical human speech characteristics",
-        },
-      ],
-    },
-    {
-      id: "demo-2",
-      date: "Feb 1, 2025, 10:30 AM",
-      fileName: "audio_clip_09.mp3",
-      result: "75% Fake",
-      isAI: true,
-      confidence: 75,
-      duration: "32.40s",
-      format: "MP3",
-      sampleRate: "48.0 kHz",
-      analysisTime: "1250 ms",
-      isDemoData: true,
-      details: [
-        {
-          label: "Voice Pattern Analysis",
-          value: "Artificial",
-          description: "Patterns indicate potential AI generation",
-        },
-      ],
-    },
-    {
-      id: "demo-3",
-      date: "Jan 30, 2025, 03:45 PM",
-      fileName: "audio_clip_08.wav",
-      result: "100% Real",
-      isAI: false,
-      confidence: 100,
-      duration: "24.80s",
-      format: "WAV",
-      sampleRate: "44.1 kHz",
-      analysisTime: "1250 ms",
-      isDemoData: true,
-      details: [
-        {
-          label: "Voice Pattern Analysis",
-          value: "Natural",
-          description: "Patterns match typical human speech characteristics",
-        },
-      ],
-    },
-  ];
 
   // Function to format analysis data from API response
   const formatAnalysisData = (analyses) => {
@@ -112,31 +48,9 @@ const HistoryPage = () => {
           confidence = 0.5;
         }
 
-        // For the demo data, we want to display the exact percentages as shown in the mockup
-        const isDemoFile =
-          metadata.filename &&
-          [
-            "audio_clip_10.wav",
-            "audio_clip_09.mp3",
-            "audio_clip_08.wav",
-          ].includes(metadata.filename);
-
-        let resultText;
-        if (isDemoFile) {
-          // Use predefined percentages for demo files to match the UI mockup
-          if (metadata.filename === "audio_clip_10.wav") {
-            resultText = "97% Real";
-          } else if (metadata.filename === "audio_clip_09.mp3") {
-            resultText = "75% Fake";
-          } else if (metadata.filename === "audio_clip_08.wav") {
-            resultText = "100% Real";
-          }
-        } else {
-          // Normal calculation for non-demo files
-          resultText = analysis.is_deepfake
-            ? `${Math.round(confidence * 100)}% Fake`
-            : `${Math.round((1 - confidence) * 100)}% Real`;
-        }
+        let resultText = analysis.is_deepfake
+          ? `${Math.round(confidence * 100)}% Fake`
+          : `${Math.round((1 - confidence) * 100)}% Real`;
 
         // Extract audio details
         const detailsArray = [];
@@ -210,24 +124,9 @@ const HistoryPage = () => {
             console.error("Error parsing processing time:", e);
             processingTime = null;
           }
-        } // For demo data detection - demo data often has a specific pattern
-        const isDemoData =
-          metadata.filename &&
-          [
-            "audio_clip_10.wav",
-            "audio_clip_09.mp3",
-            "audio_clip_08.wav",
-          ].includes(metadata.filename); // Determine if the file is AI-generated/fake based on the specific demo file or analysis result
-        let isAI = analysis.is_deepfake;
-
-        // For demo files, override based on the UI mockup
-        if (isDemoFile) {
-          if (metadata.filename === "audio_clip_09.mp3") {
-            isAI = true; // This is 75% Fake as per mockup
-          } else {
-            isAI = false; // The other two are Real
-          }
         }
+
+        let isAI = analysis.is_deepfake;
 
         return {
           id: analysis.id,
@@ -235,15 +134,7 @@ const HistoryPage = () => {
           fileName: metadata.filename || "Unknown File",
           result: resultText,
           isAI: isAI,
-          confidence: isDemoFile
-            ? metadata.filename === "audio_clip_10.wav"
-              ? 97
-              : metadata.filename === "audio_clip_09.mp3"
-              ? 75
-              : metadata.filename === "audio_clip_08.wav"
-              ? 100
-              : Math.round(confidence * 100)
-            : Math.round(confidence * 100),
+          confidence: Math.round(confidence * 100),
           duration: metadata.duration
             ? `${parseFloat(metadata.duration).toFixed(2)}s`
             : "Unknown",
@@ -258,22 +149,15 @@ const HistoryPage = () => {
               ? `${processingTime.toFixed(0)} ms`
               : "Unknown",
           details: detailsArray,
-          isDemoData: isDemoData, // Flag demo data for special UI treatment
           rawData: analysis, // Keep the raw data for reference
         };
       })
       .filter(Boolean); // Remove any null entries
   };
+
   useEffect(() => {
     const fetchAnalyses = async () => {
       try {
-        // If we're in preview mode, don't fetch real data
-        if (isPreviewMode) {
-          setHistoryData(staticDemoData);
-          setLoading(false);
-          return;
-        }
-
         if (!user || !user.token) {
           setError("You must be logged in to view history");
           setLoading(false);
@@ -301,7 +185,7 @@ const HistoryPage = () => {
 
     fetchAnalyses();
     setSelectedItems([]);
-  }, [user, isPreviewMode]);
+  }, [user]);
 
   const handleItemSelect = (id) => {
     setSelectedItems((prev) => {
@@ -323,36 +207,23 @@ const HistoryPage = () => {
 
   const handleDeleteSelected = async () => {
     if (selectedItems.length === 0) return;
+    setShowDeleteModal(true);
+  };
 
-    // Currently just showing a modal - in future, implement the actual delete API call
-    if (
-      window.confirm(
-        `Delete ${selectedItems.length} selected items? This action cannot be undone.`
-      )
-    ) {
-      setIsDeleting(true);
-
-      try {
-        // For now just show that we would delete these items
-        console.log("Would delete these items:", selectedItems);
-
-        // Placeholder for future API implementation
-        // await api.deleteAnalyses(selectedItems, user.token);
-
-        // Remove the deleted items from the local state
-        setHistoryData((prev) =>
-          prev.filter((item) => !selectedItems.includes(item.id))
-        );
-        setSelectedItems([]);
-        alert(
-          "Delete functionality has been prepared for implementation, but is not yet active in this version."
-        );
-      } catch (err) {
-        console.error("Error deleting items:", err);
-        setError("Failed to delete selected items");
-      } finally {
-        setIsDeleting(false);
-      }
+  const confirmDelete = async () => {
+    setIsDeleting(true);
+    try {
+      await api.deleteAnalyses(selectedItems, user.token);
+      setHistoryData((prev) =>
+        prev.filter((item) => !selectedItems.includes(item.id))
+      );
+      setSelectedItems([]);
+      setShowDeleteModal(false);
+    } catch (err) {
+      console.error("Error deleting items:", err);
+      setError("Failed to delete selected items");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -375,42 +246,6 @@ const HistoryPage = () => {
     }
   };
 
-  // Function to toggle preview mode with static demo data
-  const togglePreviewMode = () => {
-    if (isPreviewMode) {
-      // If we're turning off preview mode, fetch the real data if user is logged in
-      if (user && user.token) {
-        setLoading(true);
-        api
-          .getUserAnalyses(user.token)
-          .then((response) => {
-            if (response.analyses && Array.isArray(response.analyses)) {
-              const formattedData = formatAnalysisData(response.analyses);
-              setHistoryData(formattedData);
-            } else {
-              setHistoryData([]);
-            }
-            setLoading(false);
-          })
-          .catch((err) => {
-            console.error("Error fetching analyses:", err);
-            setError("Failed to load analysis history");
-            setLoading(false);
-            setHistoryData([]);
-          });
-      } else {
-        // If no user is logged in, just show empty data
-        setHistoryData([]);
-      }
-    } else {
-      // If we're turning on preview mode, use the static demo data
-      setHistoryData(staticDemoData);
-      setError(null);
-    }
-
-    setIsPreviewMode(!isPreviewMode);
-  };
-
   // Filter history based on search term
   const filteredHistory = historyData.filter(
     (item) =>
@@ -420,6 +255,32 @@ const HistoryPage = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-lg shadow-lg p-8 max-w-sm w-full text-center animate-fade-in">
+            <svg className="mx-auto mb-4 w-12 h-12 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            <h2 className="text-xl font-semibold mb-2 text-gray-800">Delete {selectedItems.length} selected item{selectedItems.length > 1 ? 's' : ''}?</h2>
+            <p className="text-gray-600 mb-6">This action cannot be undone. Are you sure you want to permanently delete the selected analysis{selectedItems.length > 1 ? 'es' : ''}?</p>
+            <div className="flex justify-center gap-4">
+              <button
+                onClick={confirmDelete}
+                disabled={isDeleting}
+                className="px-5 py-2 rounded-md bg-red-600 hover:bg-red-700 text-white font-medium transition-colors disabled:opacity-60">
+                {isDeleting ? 'Deleting...' : 'Delete'}
+              </button>
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                disabled={isDeleting}
+                className="px-5 py-2 rounded-md bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium transition-colors">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="flex flex-wrap justify-between items-center mb-8">
         <h1 className="text-2xl font-semibold mb-2 sm:mb-0">
           Analysis History
@@ -465,15 +326,6 @@ const HistoryPage = () => {
               Delete {selectedItems.length} selected
             </button>
           )}
-          <button
-            onClick={togglePreviewMode}
-            className={`px-4 py-2 rounded-md transition-colors mr-2 ${
-              isPreviewMode
-                ? "bg-blue-600 hover:bg-blue-700 text-white"
-                : "bg-gray-600 hover:bg-gray-700 text-white"
-            }`}>
-            {isPreviewMode ? "Exit Preview" : "Preview Layout"}
-          </button>
           <div className="relative">
             <input
               type="text"
@@ -523,119 +375,9 @@ const HistoryPage = () => {
           <p className="text-gray-500 mb-6">
             You haven't analyzed any audio files yet or no records were found.
           </p>
-          <div className="flex justify-center gap-4">
-            <button
-              onClick={togglePreviewMode}
-              className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
-              Preview Layout
-            </button>
-          </div>
         </div>
       ) : (
         <div>
-          {/* Preview Mode Banner */}
-          {isPreviewMode && (
-            <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <div className="flex items-center">
-                <svg
-                  className="w-5 h-5 text-blue-600 mr-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                  />
-                </svg>
-                <span className="text-blue-800 font-medium">Preview Mode</span>
-              </div>
-              <p className="mt-1 text-sm text-blue-700">
-                You are currently viewing a static preview of the History page
-                layout. This is for design and development purposes only. No
-                actual data is being retrieved from the database.
-              </p>
-            </div>
-          )}
-
-          {/* Demo Data Information Banner */}
-          {!isPreviewMode && historyData.some((item) => item.isDemoData) && (
-            <div className="mb-4 bg-purple-50 border border-purple-200 rounded-lg p-4">
-              <div className="flex items-center">
-                <svg
-                  className="w-5 h-5 text-purple-600 mr-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                <span className="text-purple-800 font-medium">Demo Data</span>
-              </div>
-              <p className="mt-1 text-sm text-purple-700">
-                This table includes demonstration data showcasing VocalGuard's
-                audio analysis capabilities. The data includes three sample
-                files with different detection results:
-                <span className="block mt-2 ml-2">
-                  • audio_clip_10.wav - 97% Real
-                </span>
-                <span className="block ml-2">
-                  • audio_clip_09.mp3 - 75% Fake
-                </span>
-                <span className="block ml-2">
-                  • audio_clip_08.wav - 100% Real
-                </span>
-                Demo entries are marked with a "Demo" badge.
-              </p>
-            </div>
-          )}
-
-          {/* Always show demo data information in preview mode */}
-          {isPreviewMode && (
-            <div className="mb-4 bg-purple-50 border border-purple-200 rounded-lg p-4">
-              <div className="flex items-center">
-                <svg
-                  className="w-5 h-5 text-purple-600 mr-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                <span className="text-purple-800 font-medium">Demo Data</span>
-              </div>
-              <p className="mt-1 text-sm text-purple-700">
-                This table includes demonstration data showcasing VocalGuard's
-                audio analysis capabilities. The data includes three sample
-                files with different detection results:
-                <span className="block mt-2 ml-2">
-                  • audio_clip_10.wav - 97% Real
-                </span>
-                <span className="block ml-2">
-                  • audio_clip_09.mp3 - 75% Fake
-                </span>
-                <span className="block ml-2">
-                  • audio_clip_08.wav - 100% Real
-                </span>
-                Demo entries are marked with a "Demo" badge.
-              </p>
-            </div>
-          )}
           <div className="bg-white rounded-lg shadow overflow-hidden">
             <div className="overflow-x-auto">
               <table className="min-w-full">
@@ -693,11 +435,6 @@ const HistoryPage = () => {
                       <td className="px-4 py-4 text-sm text-blue-600 max-w-[15rem] truncate">
                         <div className="flex items-center">
                           {item.fileName}
-                          {item.isDemoData && (
-                            <span className="ml-2 px-1.5 py-0.5 text-xs font-medium bg-purple-100 text-purple-800 rounded">
-                              Demo
-                            </span>
-                          )}
                         </div>
                       </td>
                       <td

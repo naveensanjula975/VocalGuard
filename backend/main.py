@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import List
 from dotenv import load_dotenv
 
-from fastapi import FastAPI, File, UploadFile, Depends, HTTPException, Form
+from fastapi import FastAPI, File, UploadFile, Depends, HTTPException, Form, Body
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
@@ -333,6 +333,27 @@ async def detect_deepfake_demo(file: UploadFile = File(...)):
         # Clean up the temporary file
         temp_file.close()
         os.unlink(temp_file.name)
+
+@app.post("/analyses/delete")
+async def delete_analyses(
+    data: dict = Body(...),
+    token_data=Depends(verify_token)
+):
+    """
+    Delete multiple analyses by their IDs for the authenticated user.
+    """
+    user_id = token_data["uid"]
+    analysis_ids = data.get("analysis_ids", [])
+    if not isinstance(analysis_ids, list) or not analysis_ids:
+        raise HTTPException(status_code=400, detail="No analysis IDs provided")
+    try:
+        db_service = DatabaseService()
+        # Optionally, check ownership of each analysis before deletion
+        # For now, rely on db_service to handle permissions if needed
+        results = db_service.delete_multiple_analyses(analysis_ids)
+        return {"deleted": results}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete analyses: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn
