@@ -3,31 +3,23 @@ const API_BASE_URL = 'http://localhost:8000';
 export const api = {
     signup: async (userData) => {
         try {
-            console.log('Signing up user:', userData.email);
             const response = await fetch(`${API_BASE_URL}/signup`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(userData),
-            });
-
-            if (!response.ok) {
+            }); if (!response.ok) {
                 const error = await response.json();
-                console.error('Signup error:', error);
                 throw new Error(error.detail || 'Signup failed');
             }
 
             return response.json();
         } catch (error) {
-            console.error('Signup error:', error);
             throw new Error(error.message || 'Network error');
         }
-    },
-
-    verifyToken: async (token) => {
+    }, verifyToken: async (token) => {
         try {
-            console.log('Verifying token...');
             const response = await fetch(`${API_BASE_URL}/protected`, {
                 method: 'GET',
                 headers: {
@@ -37,13 +29,11 @@ export const api = {
 
             if (!response.ok) {
                 const error = await response.json();
-                console.error('Token verification error:', error);
                 throw new Error(error.detail || 'Token verification failed');
             }
 
             return response.json();
         } catch (error) {
-            console.error('Token verification error:', error);
             throw new Error(error.message || 'Token verification failed');
         }
     },

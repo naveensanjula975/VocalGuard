@@ -56,7 +56,8 @@ FIREBASE_WEB_API_KEY = os.getenv("FIREBASE_WEB_API_KEY")
 # Check if the API key is available
 if not FIREBASE_WEB_API_KEY:
     print("WARNING: FIREBASE_WEB_API_KEY environment variable is not set!")
-    print("Please create a .env file with your FIREBASE_WEB_API_KEY")
+    print("Please copy .env.example to .env and update it with your Firebase credentials")
+    print("You can find these credentials in your Firebase console")
     raise ValueError("FIREBASE_WEB_API_KEY environment variable must be set")
 
 # Configure OAuth2
@@ -66,16 +67,12 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 async def verify_token(authorization: str = Depends(oauth2_scheme)):
     try:
         token = authorization.replace("Bearer ", "")
-        
-        # Print token for debugging (remove in production)
-        print(f"Verifying token: {token[:10]}...")
-        
-        # Verify token with Firebase
+          # Verify token with Firebase
         try:
             decoded_token = auth.verify_id_token(token)
-            print(f"Token verified successfully for user: {decoded_token.get('uid')}")
             return decoded_token
         except Exception as e:
+            # Log error but don't expose details in production
             print(f"Firebase token verification error: {str(e)}")
             raise HTTPException(
                 status_code=401,
@@ -108,12 +105,9 @@ async def detect_deepfake_endpoint(
         contents = await file.read()
         with open(temp_file.name, 'wb') as f:
             f.write(contents)
-            
-        # Extract audio info for logging
+              # Extract audio info
         filename = file.filename
         file_size = len(contents)
-        
-        print(f"Processing file: {filename}, size: {file_size} bytes, user: {user_id}")
         
         # Process the file with our deepfake detection logic and store results
         result = detect_deepfake(temp_file.name, user_id=user_id, store_results=True)
@@ -149,12 +143,9 @@ async def detect_deepfake_advanced_endpoint(
         contents = await file.read()
         with open(temp_file.name, 'wb') as f:
             f.write(contents)
-            
-        # Extract audio info for logging
+              # Extract audio info
         filename = file.filename
         file_size = len(contents)
-        
-        print(f"Processing file with Wav2Vec2: {filename}, size: {file_size} bytes, user: {user_id}")
         
         # Process the file with our deepfake detection logic with Wav2Vec2 and store results
         result = detect_deepfake(temp_file.name, user_id=user_id, store_results=True, use_wav2vec2=True)
@@ -210,26 +201,20 @@ async def login(user_data: UserLogin):
             "password": user_data.password,
             "returnSecureToken": True
         }
-        
-        print(f"Attempting login for user: {user_data.email}")
-        
-        # Make request to Firebase Auth
+          # Make request to Firebase Auth
         response = requests.post(url, data=json.dumps(payload))
         
         # Check if the response was successful
         if not response.ok:
-            print(f"Firebase auth HTTP error: {response.status_code}, {response.text}")
             raise HTTPException(
                 status_code=response.status_code,
                 detail=f"FIREBASE_ERROR: Authentication failed with HTTP {response.status_code}"
             )
         
         firebase_response = response.json()
-        
-        # Check for errors in the Firebase response
+          # Check for errors in the Firebase response
         if "error" in firebase_response:
             error_message = firebase_response["error"]["message"]
-            print(f"Firebase auth error: {error_message}")
             raise HTTPException(
                 status_code=401,
                 detail=f"FIREBASE_ERROR: {error_message}"
@@ -237,17 +222,13 @@ async def login(user_data: UserLogin):
         
         # Verify the required fields are in the response
         if "idToken" not in firebase_response or "localId" not in firebase_response:
-            print(f"Missing required fields in Firebase response: {firebase_response.keys()}")
             raise HTTPException(
                 status_code=500,
                 detail="Invalid response from authentication service"
             )
         
-        try:
-            # Get user data from Firebase Admin SDK
+        try:            # Get user data from Firebase Admin SDK
             user = auth.get_user_by_email(user_data.email)
-            
-            print(f"Login successful for user: {user.uid}")
             
             return {
                 "message": "Login successful",

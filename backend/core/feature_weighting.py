@@ -36,9 +36,8 @@ def load_weights():
         try:
             with open(_weights_file, 'r') as f:
                 _feature_weights = json.load(f)
-            print(f"Loaded feature weights: {_feature_weights}")
-        except Exception as e:
-            print(f"Error loading feature weights: {e}")
+        except Exception:
+            # Silently fall back to default weights
             _feature_weights = DEFAULT_WEIGHTS.copy()
     else:
         _feature_weights = DEFAULT_WEIGHTS.copy()
@@ -48,12 +47,12 @@ def save_weights():
     """Save feature weights to disk"""
     if not os.path.exists(_cache_dir):
         os.makedirs(_cache_dir, exist_ok=True)
-    
     try:
         with open(_weights_file, 'w') as f:
             json.dump(_feature_weights, f)
-    except Exception as e:
-        print(f"Error saving feature weights: {e}")
+    except Exception:
+        # Silently continue if weights can't be saved
+        pass
 
 def calculate_audio_complexity(audio, sr):
     """

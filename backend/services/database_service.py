@@ -1,18 +1,18 @@
 import firebase_admin
-from firebase_admin import db
+from firebase_admin import firestore
 import uuid
 import json
 import datetime
 from typing import Dict, List, Any, Optional
 
 class DatabaseService:
-    """Service for interacting with Firebase Realtime Database"""
+    """Service for interacting with Firebase Firestore Database"""
     
     def __init__(self):
         """Initialize the database service"""
-        # Get the database reference
-        self.db_ref = db.reference('/')
-    
+        # Get the Firestore client
+        self.db = firestore.client()
+        
     def create_audio_metadata(self, user_id: str, filename: str, file_size: int, 
                             duration: float, sample_rate: int, channels: int = 2, 
                             bit_depth: str = "16 bits", upload_timestamp: str = None) -> str:
@@ -48,9 +48,8 @@ class DatabaseService:
             'bit_depth': bit_depth,
             'upload_timestamp': timestamp,
         }
-        
-        # Push data to Firebase
-        self.db_ref.child('audio_metadata').child(metadata_id).set(metadata)
+        # Push data to Firestore
+        self.db.collection('audio_metadata').document(metadata_id).set(metadata)
         return metadata_id
     
     def create_analysis_result(self, metadata_id: str, is_deepfake: bool, 
@@ -83,8 +82,8 @@ class DatabaseService:
             'analysis_timestamp': timestamp,
         }
         
-        # Push data to Firebase
-        self.db_ref.child('analysis_results').child(analysis_id).set(analysis)
+        # Push data to Firestore
+        self.db.collection('analysis_results').document(analysis_id).set(analysis)
         
         return analysis_id
         
@@ -113,11 +112,11 @@ class DatabaseService:
             'created_at': datetime.datetime.now().isoformat(),
         }
         
-        # Push data to Firebase
-        self.db_ref.child('result_details').child(details_id).set(details)
+        # Push data to Firestore
+        self.db.collection('result_details').document(details_id).set(details)
         
         return details_id
-        
+    
     def get_user_analyses(self, user_id: str) -> List[Dict[str, Any]]:
         """
         Get all analyses for a specific user
@@ -129,7 +128,7 @@ class DatabaseService:
             List of analysis records
         """
         # First get metadata records for the user
-        metadata_query = self.db_ref.child('audio_metadata').order_by_child('user_id').equal_to(user_id).get()
+        metadata_query = self.db.collection('audio_metadata').where('user_id', '==', user_id).stream()
         
         if not metadata_query:
             return []
@@ -137,27 +136,29 @@ class DatabaseService:
         analyses = []
         
         # For each metadata, get the associated analysis
-        for metadata_id, metadata in metadata_query.items():
-            # Query for analyses with this metadata_id
-            analysis_query = self.db_ref.child('analysis_results').order_by_child('metadata_id').equal_to(metadata_id).get()
+        for metadata_doc in metadata_query:
+            metadata = metadata_doc.to_dict()
+            metadata_id = metadata_doc.id
             
-            if analysis_query:
-                for analysis_id, analysis in analysis_query.items():
-                    # Merge metadata and analysis into one record
-                    analysis_with_metadata = {**metadata, **analysis}
-                    
-                    # Get details if available
-                    details_query = self.db_ref.child('result_details').order_by_child('analysis_id').equal_to(analysis_id).get()
-                    
-                    if details_query:
-                        # There should only be one details record per analysis
-                        for _, details in details_query.items():
-                            analysis_with_metadata['details'] = details
-                    
-                    analyses.append(analysis_with_metadata)
+            # Query for analyses with this metadata_id
+            analysis_query = self.db.collection('analysis_results').where('metadata_id', '==', metadata_id).stream()
+            
+            for analysis_doc in analysis_query:
+                analysis = analysis_doc.to_dict()
+                analysis_id = analysis_doc.id
+                
+                # Merge metadata and analysis into one record
+                analysis_with_metadata = {**metadata, **analysis}
+                
+                # Get details if available
+                details_query = self.db.collection('result_details').where('analysis_id', '==', analysis_id).limit(1).stream()
+                for details_doc in details_query:
+                    analysis_with_metadata['details'] = details_doc.to_dict()
+                
+                analyses.append(analysis_with_metadata)
         
         return analyses
-        
+    
     def get_analysis(self, analysis_id: str) -> Optional[Dict[str, Any]]:
         """
         Get a specific analysis by ID with all related data
@@ -168,17 +169,22 @@ class DatabaseService:
         Returns:
             Analysis record with metadata and details
         """
-        analysis = self.db_ref.child('analysis_results').child(analysis_id).get()
+        analysis_doc = self.db.collection('analysis_results').document(analysis_id).get()
         
-        if not analysis:
+        if not analysis_doc.exists:
             return None
             
+        analysis = analysis_doc.to_dict()
+        
         # Get the related metadata
-        metadata = self.db_ref.child('audio_metadata').child(analysis['metadata_id']).get()
+        metadata_doc = self.db.collection('audio_metadata').document(analysis['metadata_id']).get()
+        metadata = metadata_doc.to_dict() if metadata_doc.exists else None
         
         # Get the related details
-        details_query = self.db_ref.child('result_details').order_by_child('analysis_id').equal_to(analysis_id).get()
-        details = list(details_query.values())[0] if details_query else None
+        details_query = self.db.collection('result_details').where('analysis_id', '==', analysis_id).limit(1).stream()
+        details = None
+        for details_doc in details_query:
+            details = details_doc.to_dict()
         
         # Combine all data
         return {
@@ -246,7 +252,7 @@ class DatabaseService:
             analysis_ids.append(analysis_id)
         
         return analysis_ids
-        
+    
     def delete_analysis(self, analysis_id: str) -> bool:
         """
         Delete an analysis and all related data (metadata and details)
@@ -259,35 +265,33 @@ class DatabaseService:
         """
         try:
             # First, get the analysis to determine the metadata ID
-            analysis = self.db_ref.child('analysis_results').child(analysis_id).get()
+            analysis_doc = self.db.collection('analysis_results').document(analysis_id).get()
             
-            if not analysis:
+            if not analysis_doc.exists:
                 return False
                 
+            analysis = analysis_doc.to_dict()
             metadata_id = analysis.get('metadata_id')
             
             # Delete related details
-            details_query = self.db_ref.child('result_details').order_by_child('analysis_id').equal_to(analysis_id).get()
-            if details_query:
-                for detail_id in details_query:
-                    self.db_ref.child('result_details').child(detail_id).delete()
+            details_query = self.db.collection('result_details').where('analysis_id', '==', analysis_id).stream()
+            for details_doc in details_query:
+                details_doc.reference.delete()
             
             # Delete the analysis result
-            self.db_ref.child('analysis_results').child(analysis_id).delete()
+            self.db.collection('analysis_results').document(analysis_id).delete()
             
             # Check if there are any other analyses using this metadata
-            other_analyses = self.db_ref.child('analysis_results').order_by_child('metadata_id').equal_to(metadata_id).get()
-            
-            # If no other analyses reference this metadata, delete the metadata too
+            other_analyses = list(self.db.collection('analysis_results').where('metadata_id', '==', metadata_id).limit(1).stream())
+              # If no other analyses reference this metadata, delete the metadata too
             if not other_analyses and metadata_id:
-                self.db_ref.child('audio_metadata').child(metadata_id).delete()
-                
+                self.db.collection('audio_metadata').document(metadata_id).delete()
             return True
             
         except Exception as e:
             print(f"Error deleting analysis: {str(e)}")
             return False
-            
+    
     def delete_multiple_analyses(self, analysis_ids: List[str]) -> Dict[str, bool]:
         """
         Delete multiple analyses and their related data

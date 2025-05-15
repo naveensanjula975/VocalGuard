@@ -34,16 +34,13 @@ const LoginForm = () => {
       default:
         return "Invalid email or password";
     }
-  };
-  const handleSubmit = async (e) => {
+  };  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
 
     try {
-      console.log("Attempting login with:", formData.email);
       const response = await api.login(formData);
-      console.log("Login response:", response);
 
       // Login the user
       login({
@@ -53,11 +50,9 @@ const LoginForm = () => {
         email: response.email,
       });
 
-      console.log("Login successful, navigating to upload page");
       // Redirect to upload page
       navigate("/upload");
     } catch (err) {
-      console.error("Login error:", err);
       const errorMessage =
         err.message && err.message.includes("FIREBASE_ERROR:")
           ? getErrorMessage(err.message.split("FIREBASE_ERROR:")[1].trim())

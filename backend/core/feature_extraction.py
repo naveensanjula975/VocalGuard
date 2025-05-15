@@ -63,11 +63,9 @@ def _load_cache():
             for key, value in cache_data.items():
                 if 'embedding' in value:
                     value['embedding'] = np.array(value['embedding'])
-            
             _wav2vec2_cache = cache_data
-            print(f"Loaded {len(_wav2vec2_cache)} cached Wav2Vec2 embeddings")
         except Exception as e:
-            print(f"Error loading Wav2Vec2 cache: {e}")
+            # Silent fail for cache loading issues
             _wav2vec2_cache = {}
     else:
         _wav2vec2_cache = {}
@@ -93,8 +91,9 @@ def _save_cache():
         
         with open(_cache_file, 'w') as f:
             json.dump(cache_data, f)
-    except Exception as e:
-        print(f"Error saving Wav2Vec2 cache: {e}")
+    except Exception:
+        # Silent fail for cache saving issues
+        pass
 
 def _trim_cache():
     """Trim the cache to the maximum size by removing oldest entries"""
