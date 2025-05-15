@@ -88,11 +88,51 @@ export const api = {
         } catch (error) {
             throw new Error(error.message || 'Network error');
         }
-    },
-
-    detectDeepfakeAdvanced: async (formData, token) => {
+    }, detectDeepfakeAdvanced: async (formData, token) => {
         try {
             const response = await fetch(`${API_BASE_URL}/detect-deepfake-advanced/`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: formData,
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || 'Advanced detection failed');
+            }
+
+            return response.json();
+        } catch (error) {
+            throw new Error(error.message || 'Network error');
+        }
+    },
+
+    detectDeepfakeHiya: async (formData, token) => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/detect-deepfake-hiya/`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: formData,
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || 'Hiya detection failed');
+            }
+
+            return response.json();
+        } catch (error) {
+            throw new Error(error.message || 'Network error');
+        }
+    },
+
+    detectDeepfakeHiya: async (formData, token) => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/detect-deepfake-hiya/`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,

@@ -6,14 +6,14 @@ import ProgressIndicator from "./ProgressIndicator";
 
 const UploadBox = () => {
   const { user } = useAuth();
-  const navigate = useNavigate();
-  const [file, setFile] = useState(null);
+  const navigate = useNavigate();  const [file, setFile] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadStatus, setUploadStatus] = useState("");
   const [error, setError] = useState("");
   const [useAdvancedAnalysis, setUseAdvancedAnalysis] = useState(false);
+  const [useHiyaAPI, setUseHiyaAPI] = useState(false);
   const fileInputRef = useRef(null);
 
   const handleDragOver = (e) => {
@@ -160,22 +160,30 @@ const UploadBox = () => {
         }
         setUploadProgress(Math.min(progress, 95));
         setUploadStatus(getStatusMessage(progress));
-      }, 500);      // Make actual API call using either standard or advanced endpoint
-      const result = useAdvancedAnalysis 
-        ? await api.detectDeepfakeAdvanced(formData, user.token)
-        : await api.detectDeepfake(formData, user.token);
+      }, 500);      // Make actual API call using standard, advanced or Hiya endpoint
+      let result;
+      if (useHiyaAPI) {
+        result = await api.detectDeepfakeHiya(formData, user.token);
+      } else if (useAdvancedAnalysis) {
+        result = await api.detectDeepfakeAdvanced(formData, user.token);
+      } else {
+        result = await api.detectDeepfake(formData, user.token);
+      }
 
       // Stop progress simulation
       clearInterval(interval);
       setUploadProgress(100);
-      setUploadStatus("Complete!"); // Enhance result with local file details and Firebase IDs
+      setUploadStatus("Complete!"); 
+      
+      // Enhance result with local file details and Firebase IDs
       const enhancedResult = {
         ...result,
         fileName: file.name,
         fileSize: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
         format: file.type.split("/")[1].toUpperCase(),
         timestamp: new Date().toISOString(),
-        modelUsed: useAdvancedAnalysis ? 'Wav2Vec2 (Advanced)' : 'Standard',
+        modelUsed: useHiyaAPI ? 'Hiya Audio Intelligence' : 
+                  useAdvancedAnalysis ? 'Wav2Vec2 (Advanced)' : 'Standard',
 
         // Use Firebase IDs directly from API response for history linking
         metadata_id: result.metadata_id,
@@ -290,30 +298,62 @@ const UploadBox = () => {
             {error && (
               <div className="text-sm text-center text-red-500">{error}</div>
             )}
-            
-            <div className="flex items-center">
-              <label className="inline-flex items-center cursor-pointer">
-                <input 
-                  type="checkbox" 
-                  className="sr-only peer" 
-                  checked={useAdvancedAnalysis}
-                  onChange={() => setUseAdvancedAnalysis(!useAdvancedAnalysis)}
-                />
-                <div className="relative w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-purple-300 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
-                <span className="ms-3 text-sm font-medium text-gray-900">Use Advanced Analysis (Wav2Vec2)</span>
-              </label>
-              
-              {useAdvancedAnalysis && (
-                <div className="ml-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-purple-600" data-tooltip-target="tooltip-advanced">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
-                  </svg>
-                  <div id="tooltip-advanced" role="tooltip" className="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-sm opacity-0 tooltip">
-                    Uses Wav2Vec2 neural network model for more accurate analysis. May take longer to process.
-                    <div className="tooltip-arrow" data-popper-arrow></div>
+              <div className="flex flex-col gap-3">
+              <div className="flex items-center">
+                <label className="inline-flex items-center cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    className="sr-only peer" 
+                    checked={useAdvancedAnalysis}
+                    onChange={() => {
+                      setUseAdvancedAnalysis(!useAdvancedAnalysis);
+                      if (!useAdvancedAnalysis) setUseHiyaAPI(false);
+                    }}
+                  />
+                  <div className="relative w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-purple-300 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                  <span className="ms-3 text-sm font-medium text-gray-900">Use Advanced Analysis (Wav2Vec2)</span>
+                </label>
+                
+                {useAdvancedAnalysis && (
+                  <div className="ml-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-purple-600" data-tooltip-target="tooltip-advanced">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                    </svg>
+                    <div id="tooltip-advanced" role="tooltip" className="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-sm opacity-0 tooltip">
+                      Uses Wav2Vec2 neural network model for more accurate analysis. May take longer to process.
+                      <div className="tooltip-arrow" data-popper-arrow></div>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
+              
+              <div className="flex items-center">
+                <label className="inline-flex items-center cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    className="sr-only peer" 
+                    checked={useHiyaAPI}
+                    onChange={() => {
+                      setUseHiyaAPI(!useHiyaAPI);
+                      if (!useHiyaAPI) setUseAdvancedAnalysis(false);
+                    }}
+                  />
+                  <div className="relative w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-300 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  <span className="ms-3 text-sm font-medium text-gray-900">Use Hiya Audio Intelligence API</span>
+                </label>
+                
+                {useHiyaAPI && (
+                  <div className="ml-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-blue-600" data-tooltip-target="tooltip-hiya">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                    </svg>
+                    <div id="tooltip-hiya" role="tooltip" className="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-sm opacity-0 tooltip">
+                      Uses Hiya's external Audio Intelligence API for enhanced deepfake detection. May have better accuracy for specific voice types.
+                      <div className="tooltip-arrow" data-popper-arrow></div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             <button

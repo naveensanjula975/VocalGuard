@@ -166,6 +166,44 @@ async def detect_deepfake_advanced_endpoint(
         temp_file.close()
         os.unlink(temp_file.name)
 
+@app.post("/detect-deepfake-hiya/")
+async def detect_deepfake_hiya_endpoint(
+    file: UploadFile = File(...),
+    token_data: dict = Depends(verify_token)
+):
+    """
+    Endpoint using Hiya's Audio Intelligence API to detect if an audio file is a deepfake
+    """
+    user_id = token_data["uid"]
+    
+    # Save the uploaded file to a temporary location
+    temp_file = tempfile.NamedTemporaryFile(delete=False)
+    try:
+        contents = await file.read()
+        with open(temp_file.name, 'wb') as f:
+            f.write(contents)
+              # Extract audio info
+        filename = file.filename
+        file_size = len(contents)
+        
+        # Process the file with Hiya's API and store results
+        result = detect_deepfake(temp_file.name, user_id=user_id, store_results=True, use_hiya_api=True)
+        
+        # Add filename to result
+        result["filename"] = filename
+        
+        return result
+    except Exception as e:
+        print(f"Error processing audio with Hiya API: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"Failed to process audio with Hiya API: {str(e)}"}
+        )
+    finally:
+        # Clean up the temporary file
+        temp_file.close()
+        os.unlink(temp_file.name)
+
 @app.post("/signup")
 async def signup(user_data: UserSignUp):
     try:
@@ -202,7 +240,7 @@ async def login(user_data: UserLogin):
             "returnSecureToken": True
         }
           # Make request to Firebase Auth
-        response = requests.post(url, data=json.dumps(payload))
+        response = requests.post(url, json=payload)
         
         # Check if the response was successful
         if not response.ok:

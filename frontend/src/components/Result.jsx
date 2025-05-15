@@ -261,8 +261,8 @@ const Result = ({ result: propResult }) => {
             <div className="p-4 rounded-lg bg-gray-50">
               <h2 className="mb-3 text-lg font-semibold text-gray-900">
                 Detailed Analysis
-              </h2>
-              <div className="grid grid-cols-2 gap-3">
+              </h2>              <div className="grid grid-cols-2 gap-3">
+                {/* Handle standard details */}
                 {(Array.isArray(result.details) ? result.details : []).map(
                   (detail, index) => (
                     <div
@@ -279,6 +279,25 @@ const Result = ({ result: propResult }) => {
                           {detail.description}
                         </p>
                       )}
+                    </div>
+                  )
+                )}
+                
+                {/* Handle Hiya API details if present */}
+                {result.hiya_details && result.hiya_details.scores && Object.entries(result.hiya_details.scores).map(
+                  ([key, value], index) => (
+                    <div
+                      key={`hiya-${index}`}
+                      className="p-3 bg-white rounded-lg shadow-sm border-l-4 border-blue-500">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium text-gray-900">
+                          {key.replace(/_/g, ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                        </span>
+                        <span className="text-gray-600">{(value * 100).toFixed(1)}%</span>
+                      </div>
+                      <p className="mt-1 text-sm text-gray-500">
+                        {key.includes('score') ? 'Analysis score from Hiya Audio Intelligence' : 'Detailed score factor from Hiya analysis'}
+                      </p>
                     </div>
                   )
                 )}
@@ -308,11 +327,15 @@ const Result = ({ result: propResult }) => {
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Model Used</p>
-                  <p className="font-medium">
-                    {result.modelUsed || "Standard"}
+                  <p className="font-medium">                    {result.modelUsed || "Standard"}
                     {result.modelUsed === "Wav2Vec2 (Advanced)" && (
                       <span className="inline-flex ml-1 px-1.5 py-0.5 text-xs font-medium bg-purple-100 text-purple-800 rounded">
                         AI
+                      </span>
+                    )}
+                    {result.modelUsed === "Hiya Audio Intelligence" && (
+                      <span className="inline-flex ml-1 px-1.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 rounded">
+                        External API
                       </span>
                     )}
                   </p>
