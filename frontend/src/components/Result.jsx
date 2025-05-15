@@ -295,7 +295,8 @@ const Result = ({ result: propResult }) => {
                 <div>
                   <p className="text-sm text-gray-500">Bit Depth</p>
                   <p className="font-medium">{result.bitDepth}</p>
-                </div>                <div>
+                </div>{" "}
+                <div>
                   <p className="text-sm text-gray-500">Channels</p>
                   <p className="font-medium">{result.channels}</p>
                 </div>
@@ -317,7 +318,18 @@ const Result = ({ result: propResult }) => {
               </div>
             </div>
             {/* Action Buttons */}
-            <div className="flex justify-end gap-4">
+            <div className="flex flex-wrap justify-end gap-4">
+              {result.analysis_id && (
+                <button
+                  onClick={() => navigate(`/analysis/${result.analysis_id}`)}
+                  title="View advanced visualization and detailed feature analysis"
+                  className="relative px-4 py-2 font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 group">
+                  View Detailed Analysis
+                  <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-1 text-xs font-medium text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
+                    See advanced visualizations and in-depth feature analysis
+                  </span>
+                </button>
+              )}
               <button
                 onClick={generatePDF}
                 disabled={isGeneratingPDF}

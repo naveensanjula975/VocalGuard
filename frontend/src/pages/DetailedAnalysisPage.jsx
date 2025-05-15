@@ -35,11 +35,13 @@ const DetailedAnalysisPage = () => {
         }
 
         // Format the data to match the component's expected format
-        const uploadDate = new Date(data.analysis_timestamp);
+        const uploadDate = new Date(data.analysis_timestamp || data.metadata?.upload_timestamp);
         const formattedDate = uploadDate.toLocaleDateString("en-US", {
           year: "numeric",
           month: "short",
           day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit"
         });
 
         // Format the result string
@@ -62,6 +64,7 @@ const DetailedAnalysisPage = () => {
                 features.mfcc_score > 0.5
                   ? "Patterns indicate potential AI generation"
                   : "Patterns match typical human speech characteristics",
+              score: features.mfcc_score
             });
           }
 
@@ -73,6 +76,31 @@ const DetailedAnalysisPage = () => {
                 features.spectral_score > 0.5
                   ? "Unusual frequency distribution detected"
                   : "Frequency distribution within expected human range",
+              score: features.spectral_score
+            });
+          }
+          
+          if (features.wav2vec2_score !== undefined) {
+            detailsArray.push({
+              label: "Neural Pattern Analysis",
+              value: features.wav2vec2_score > 0.5 ? "AI Detected" : "Human Likely",
+              description:
+                features.wav2vec2_score > 0.5
+                  ? "Neural network detected patterns consistent with AI generation"
+                  : "Neural patterns more consistent with human speech",
+              score: features.wav2vec2_score
+            });
+          }
+          
+          if (features.temporal_score !== undefined) {
+            detailsArray.push({
+              label: "Temporal Coherence",
+              value: features.temporal_score > 0.5 ? "Inconsistent" : "Consistent",
+              description:
+                features.temporal_score > 0.5
+                  ? "Time-based patterns show potential synthesis artifacts"
+                  : "Time-based patterns show natural human speech variation",
+              score: features.temporal_score
             });
           }
         }
@@ -85,6 +113,7 @@ const DetailedAnalysisPage = () => {
             description: data.is_deepfake
               ? "AI patterns detected in the audio"
               : "Natural human voice characteristics detected",
+            score: data.confidence_score
           });
         }
 
@@ -127,6 +156,22 @@ const DetailedAnalysisPage = () => {
     navigate("/history");
     return null;
   }
+  
+  const handleBackToResult = () => {
+    // If we have the raw data and it includes an ID, use that for navigation
+    if (analysisData?.rawData?.id) {
+      navigate(`/result/${analysisData.rawData.id}`);
+    } 
+    // Otherwise use the ID from the URL parameters
+    else if (id) {
+      navigate(`/result/${id}`);
+    }
+    // If no ID is available, just go to history
+    else {
+      navigate("/history");
+    }
+  };
+  
   return (
     <div>
       {loading ? (
@@ -143,7 +188,22 @@ const DetailedAnalysisPage = () => {
           </button>
         </div>
       ) : analysisData ? (
-        <DetailedAnalysis analysisData={analysisData} />
+        <>
+          <div className="bg-gray-50 p-4">
+            <div className="max-w-7xl mx-auto">
+              <button 
+                onClick={handleBackToResult}
+                className="flex items-center text-purple-600 hover:text-purple-800 transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                Back to Basic Result
+              </button>
+            </div>
+          </div>
+          <DetailedAnalysis analysisData={analysisData} />
+        </>
       ) : null}
     </div>
   );

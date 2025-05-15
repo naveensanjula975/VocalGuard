@@ -8,7 +8,6 @@ const HistoryPage = () => {
   const [historyData, setHistoryData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [demoDataGenerated, setDemoDataGenerated] = useState(false);
   const [selectedItems, setSelectedItems] = useState([]);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
@@ -88,6 +87,8 @@ const HistoryPage = () => {
     return analyses
       .map((analysis) => {
         if (!analysis) return null;
+
+        const metadata = analysis.metadata || {};
 
         // Extract and format the timestamp
         const uploadDate = analysis.analysis_timestamp
@@ -190,7 +191,6 @@ const HistoryPage = () => {
         }
 
         // Safely get values with fallbacks
-        const metadata = analysis.metadata || {};
         const details = analysis.details || {};
         let processingTime = null;
 
@@ -300,8 +300,6 @@ const HistoryPage = () => {
     };
 
     fetchAnalyses();
-    // Reset demo data generated flag when user changes
-    setDemoDataGenerated(false);
     setSelectedItems([]);
   }, [user, isPreviewMode]);
 
@@ -374,48 +372,6 @@ const HistoryPage = () => {
       navigate(`/result/${item.analysis_id}`);
     } else {
       navigate("/detailed-analysis", { state: { analysisData: item } });
-    }
-  };
-  const handleGenerateDemoData = async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      // Generate demo data
-      const result = await api.generateDummyData(user.token);
-      console.log("Demo data generated:", result);
-
-      // Show the number of generated analyses
-      const generatedCount = result.analysis_ids?.length || 0;
-
-      // Wait a moment for Firebase to update
-      setTimeout(async () => {
-        try {
-          // Fetch the updated analyses
-          const response = await api.getUserAnalyses(user.token);
-
-          if (response.analyses && Array.isArray(response.analyses)) {
-            // Transform API data to match our component's expected format
-            const formattedData = formatAnalysisData(response.analyses);
-            setHistoryData(formattedData);
-            setDemoDataGenerated(true);
-          }
-          setLoading(false);
-        } catch (fetchErr) {
-          console.error(
-            "Error fetching analyses after demo generation:",
-            fetchErr
-          );
-          setError("Generated demo data but failed to refresh the display");
-          setLoading(false);
-        }
-      }, 1000); // Short delay to ensure Firebase data is ready
-    } catch (err) {
-      console.error("Error generating dummy data:", err);
-      setError(
-        "Failed to generate demo data: " + (err.message || "Unknown error")
-      );
-      setLoading(false);
     }
   };
 
@@ -508,7 +464,7 @@ const HistoryPage = () => {
               )}
               Delete {selectedItems.length} selected
             </button>
-          )}{" "}
+          )}
           <button
             onClick={togglePreviewMode}
             className={`px-4 py-2 rounded-md transition-colors mr-2 ${
@@ -518,45 +474,6 @@ const HistoryPage = () => {
             }`}>
             {isPreviewMode ? "Exit Preview" : "Preview Layout"}
           </button>
-          {user && !isPreviewMode && (
-            <button
-              onClick={handleGenerateDemoData}
-              disabled={loading}
-              className={`px-4 py-2 rounded-md transition-colors ${
-                loading
-                  ? "bg-gray-400 cursor-not-allowed text-white"
-                  : demoDataGenerated
-                  ? "bg-green-600 hover:bg-green-700 text-white"
-                  : "bg-purple-600 hover:bg-purple-700 text-white"
-              }`}>
-              {loading ? (
-                <span className="flex items-center">
-                  <svg
-                    className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24">
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Generating...
-                </span>
-              ) : demoDataGenerated ? (
-                "✓ Demo Data Generated"
-              ) : (
-                "Generate Demo Data"
-              )}
-            </button>
-          )}
           <div className="relative">
             <input
               type="text"
@@ -612,13 +529,6 @@ const HistoryPage = () => {
               className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
               Preview Layout
             </button>
-            {user && !demoDataGenerated && !isPreviewMode && (
-              <button
-                onClick={handleGenerateDemoData}
-                className="px-6 py-3 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors">
-                Generate Demo Data
-              </button>
-            )}
           </div>
         </div>
       ) : (

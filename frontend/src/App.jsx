@@ -61,6 +61,7 @@ const AppContent = () => {
             path="/detailed-analysis/:id"
             element={<DetailedAnalysisPage />}
           />
+          <Route path="/analysis/:id" element={<DetailedAnalysisPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
