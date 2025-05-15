@@ -66,9 +66,23 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 async def verify_token(authorization: str = Depends(oauth2_scheme)):
     try:
         token = authorization.replace("Bearer ", "")
-        decoded_token = auth.verify_id_token(token)
-        return decoded_token
-    except Exception:
+        
+        # Print token for debugging (remove in production)
+        print(f"Verifying token: {token[:10]}...")
+        
+        # Verify token with Firebase
+        try:
+            decoded_token = auth.verify_id_token(token)
+            print(f"Token verified successfully for user: {decoded_token.get('uid')}")
+            return decoded_token
+        except Exception as e:
+            print(f"Firebase token verification error: {str(e)}")
+            raise HTTPException(
+                status_code=401,
+                detail=f"FIREBASE_ERROR: Invalid token: {str(e)}"
+            )
+    except Exception as e:
+        print(f"General token verification error: {str(e)}")
         raise HTTPException(
             status_code=401,
             detail="Invalid authentication credentials"
@@ -118,6 +132,48 @@ async def detect_deepfake_endpoint(
         # Clean up the temporary file
         temp_file.close()
         os.unlink(temp_file.name)
+        
+@app.post("/detect-deepfake-advanced/")
+async def detect_deepfake_advanced_endpoint(
+    file: UploadFile = File(...),
+    token_data: dict = Depends(verify_token)
+):
+    """
+    Advanced endpoint using Wav2Vec2 model to detect if an audio file is a deepfake
+    """
+    user_id = token_data["uid"]
+    
+    # Save the uploaded file to a temporary location
+    temp_file = tempfile.NamedTemporaryFile(delete=False)
+    try:
+        contents = await file.read()
+        with open(temp_file.name, 'wb') as f:
+            f.write(contents)
+            
+        # Extract audio info for logging
+        filename = file.filename
+        file_size = len(contents)
+        
+        print(f"Processing file with Wav2Vec2: {filename}, size: {file_size} bytes, user: {user_id}")
+        
+        # Process the file with our deepfake detection logic with Wav2Vec2 and store results
+        result = detect_deepfake(temp_file.name, user_id=user_id, store_results=True, use_wav2vec2=True)
+        
+        # Add filename and model info to result
+        result["filename"] = filename
+        result["model_used"] = "wav2vec2"
+        
+        return result
+    except Exception as e:
+        print(f"Error processing audio with Wav2Vec2: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"Failed to process audio with Wav2Vec2: {str(e)}"}
+        )
+    finally:
+        # Clean up the temporary file
+        temp_file.close()
+        os.unlink(temp_file.name)
 
 @app.post("/signup")
 async def signup(user_data: UserSignUp):
@@ -155,29 +211,61 @@ async def login(user_data: UserLogin):
             "returnSecureToken": True
         }
         
+        print(f"Attempting login for user: {user_data.email}")
+        
         # Make request to Firebase Auth
         response = requests.post(url, data=json.dumps(payload))
+        
+        # Check if the response was successful
+        if not response.ok:
+            print(f"Firebase auth HTTP error: {response.status_code}, {response.text}")
+            raise HTTPException(
+                status_code=response.status_code,
+                detail=f"FIREBASE_ERROR: Authentication failed with HTTP {response.status_code}"
+            )
+        
         firebase_response = response.json()
         
-        # Check for errors in the response
+        # Check for errors in the Firebase response
         if "error" in firebase_response:
             error_message = firebase_response["error"]["message"]
             print(f"Firebase auth error: {error_message}")
-            if error_message == "EMAIL_NOT_FOUND" or error_message == "INVALID_PASSWORD":
-                raise HTTPException(status_code=401, detail="Invalid email or password")
-            else:
-                raise HTTPException(status_code=400, detail=error_message)
+            raise HTTPException(
+                status_code=401,
+                detail=f"FIREBASE_ERROR: {error_message}"
+            )
         
-        # Get user data
-        user = auth.get_user_by_email(user_data.email)
+        # Verify the required fields are in the response
+        if "idToken" not in firebase_response or "localId" not in firebase_response:
+            print(f"Missing required fields in Firebase response: {firebase_response.keys()}")
+            raise HTTPException(
+                status_code=500,
+                detail="Invalid response from authentication service"
+            )
         
-        return {
-            "message": "Login successful",
-            "user_id": user.uid,
-            "token": firebase_response["idToken"],  # Use the ID token from Firebase Auth
-            "username": user.display_name,
-            "email": user.email
-        }
+        try:
+            # Get user data from Firebase Admin SDK
+            user = auth.get_user_by_email(user_data.email)
+            
+            print(f"Login successful for user: {user.uid}")
+            
+            return {
+                "message": "Login successful",
+                "user_id": user.uid,
+                "token": firebase_response["idToken"],
+                "username": user.display_name or user.email.split('@')[0],  # Fallback to email prefix if no display name
+                "email": user.email
+            }
+        except Exception as user_fetch_error:
+            print(f"Error fetching user data: {user_fetch_error}")
+            # Even if we can't get the user data, we can still return the token
+            return {
+                "message": "Login successful",
+                "user_id": firebase_response["localId"],
+                "token": firebase_response["idToken"],
+                "username": user_data.email.split('@')[0],  # Use email prefix as username
+                "email": user_data.email
+            }
     except HTTPException as he:
         raise he
     except Exception as e:

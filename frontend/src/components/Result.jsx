@@ -26,6 +26,7 @@ const dummyResult = {
   details_id: "demo-details-9012",
   sampleRate: "44.1 kHz",
   analysisTime: "2450",
+  modelUsed: "Standard",
   details: [
     {
       label: "Voice Pattern Analysis",
@@ -294,14 +295,24 @@ const Result = ({ result: propResult }) => {
                 <div>
                   <p className="text-sm text-gray-500">Bit Depth</p>
                   <p className="font-medium">{result.bitDepth}</p>
-                </div>
-                <div>
+                </div>                <div>
                   <p className="text-sm text-gray-500">Channels</p>
                   <p className="font-medium">{result.channels}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Analysis Time</p>
                   <p className="font-medium">{result.analysisTime} ms</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Model Used</p>
+                  <p className="font-medium">
+                    {result.modelUsed || "Standard"}
+                    {result.modelUsed === "Wav2Vec2 (Advanced)" && (
+                      <span className="inline-flex ml-1 px-1.5 py-0.5 text-xs font-medium bg-purple-100 text-purple-800 rounded">
+                        AI
+                      </span>
+                    )}
+                  </p>
                 </div>
               </div>
             </div>

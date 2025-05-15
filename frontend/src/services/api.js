@@ -3,6 +3,7 @@ const API_BASE_URL = 'http://localhost:8000';
 export const api = {
     signup: async (userData) => {
         try {
+            console.log('Signing up user:', userData.email);
             const response = await fetch(`${API_BASE_URL}/signup`, {
                 method: 'POST',
                 headers: {
@@ -13,12 +14,37 @@ export const api = {
 
             if (!response.ok) {
                 const error = await response.json();
+                console.error('Signup error:', error);
                 throw new Error(error.detail || 'Signup failed');
             }
 
             return response.json();
         } catch (error) {
+            console.error('Signup error:', error);
             throw new Error(error.message || 'Network error');
+        }
+    },
+
+    verifyToken: async (token) => {
+        try {
+            console.log('Verifying token...');
+            const response = await fetch(`${API_BASE_URL}/protected`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                console.error('Token verification error:', error);
+                throw new Error(error.detail || 'Token verification failed');
+            }
+
+            return response.json();
+        } catch (error) {
+            console.error('Token verification error:', error);
+            throw new Error(error.message || 'Token verification failed');
         }
     },
 
@@ -42,13 +68,18 @@ export const api = {
                 throw new Error(data.detail || 'Login failed');
             }
 
+            // Ensure we have all required fields
+            if (!data.token || !data.user_id || !data.username) {
+                console.error('Login response missing required fields:', data);
+                throw new Error('Incomplete login data received from server');
+            }
+
             return data;
         } catch (error) {
+            console.error('Login error:', error);
             throw error;
         }
-    },
-
-    detectDeepfake: async (formData, token) => {
+    }, detectDeepfake: async (formData, token) => {
         try {
             const response = await fetch(`${API_BASE_URL}/detect-deepfake/`, {
                 method: 'POST',
@@ -61,6 +92,27 @@ export const api = {
             if (!response.ok) {
                 const error = await response.json();
                 throw new Error(error.detail || 'Detection failed');
+            }
+
+            return response.json();
+        } catch (error) {
+            throw new Error(error.message || 'Network error');
+        }
+    },
+
+    detectDeepfakeAdvanced: async (formData, token) => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/detect-deepfake-advanced/`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: formData,
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || 'Advanced detection failed');
             }
 
             return response.json();

@@ -13,6 +13,7 @@ const UploadBox = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadStatus, setUploadStatus] = useState("");
   const [error, setError] = useState("");
+  const [useAdvancedAnalysis, setUseAdvancedAnalysis] = useState(false);
   const fileInputRef = useRef(null);
 
   const handleDragOver = (e) => {
@@ -35,13 +36,19 @@ const UploadBox = () => {
       setError("");
     }
   };
-
   const validateFile = (file) => {
     if (!file) return false;
 
-    const validTypes = ["audio/mp3", "audio/flac", "audio/mpeg"];
+    const validTypes = [
+      "audio/mp3",
+      "audio/flac",
+      "audio/mpeg",
+      "audio/wav",
+      "audio/x-wav",
+      "audio/wave",
+    ];
     if (!validTypes.includes(file.type)) {
-      setError("Please upload only MP3 or FLAC files");
+      setError("Please upload only MP3, WAV or FLAC files");
       return false;
     }
 
@@ -153,10 +160,10 @@ const UploadBox = () => {
         }
         setUploadProgress(Math.min(progress, 95));
         setUploadStatus(getStatusMessage(progress));
-      }, 500);
-
-      // Make actual API call
-      const result = await api.detectDeepfake(formData, user.token);
+      }, 500);      // Make actual API call using either standard or advanced endpoint
+      const result = useAdvancedAnalysis 
+        ? await api.detectDeepfakeAdvanced(formData, user.token)
+        : await api.detectDeepfake(formData, user.token);
 
       // Stop progress simulation
       clearInterval(interval);
@@ -168,6 +175,7 @@ const UploadBox = () => {
         fileSize: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
         format: file.type.split("/")[1].toUpperCase(),
         timestamp: new Date().toISOString(),
+        modelUsed: useAdvancedAnalysis ? 'Wav2Vec2 (Advanced)' : 'Standard',
 
         // Use Firebase IDs directly from API response for history linking
         metadata_id: result.metadata_id,
@@ -217,13 +225,13 @@ const UploadBox = () => {
   return (
     <div className="flex justify-center items-center w-full min-h-[calc(100vh-64px)] p-8 bg-gray-50">
       <div className="bg-white p-10 rounded-2xl shadow-lg w-full max-w-[500px] mx-auto">
+        {" "}
         <h1 className="mb-2 text-2xl font-semibold text-center text-gray-800">
           Upload Audio
         </h1>
         <p className="mb-8 text-center text-gray-600">
-          Upload MP3 or FLAC file to analyze
+          Upload MP3, WAV or FLAC file to analyze
         </p>
-
         {isUploading ? (
           <div className="flex flex-col items-center justify-center py-8">
             <ProgressIndicator
@@ -245,10 +253,10 @@ const UploadBox = () => {
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
               onClick={() => fileInputRef.current?.click()}>
-              <input
+              {" "}              <input
                 ref={fileInputRef}
                 type="file"
-                accept=".mp3,.flac"
+                accept=".mp3,.wav,.flac"
                 onChange={handleFileSelect}
                 className="hidden"
               />
@@ -282,6 +290,31 @@ const UploadBox = () => {
             {error && (
               <div className="text-sm text-center text-red-500">{error}</div>
             )}
+            
+            <div className="flex items-center">
+              <label className="inline-flex items-center cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  className="sr-only peer" 
+                  checked={useAdvancedAnalysis}
+                  onChange={() => setUseAdvancedAnalysis(!useAdvancedAnalysis)}
+                />
+                <div className="relative w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-purple-300 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                <span className="ms-3 text-sm font-medium text-gray-900">Use Advanced Analysis (Wav2Vec2)</span>
+              </label>
+              
+              {useAdvancedAnalysis && (
+                <div className="ml-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-purple-600" data-tooltip-target="tooltip-advanced">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                  </svg>
+                  <div id="tooltip-advanced" role="tooltip" className="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-sm opacity-0 tooltip">
+                    Uses Wav2Vec2 neural network model for more accurate analysis. May take longer to process.
+                    <div className="tooltip-arrow" data-popper-arrow></div>
+                  </div>
+                </div>
+              )}
+            </div>
 
             <button
               type="submit"

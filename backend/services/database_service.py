@@ -12,9 +12,10 @@ class DatabaseService:
         """Initialize the database service"""
         # Get the database reference
         self.db_ref = db.reference('/')
-          def create_audio_metadata(self, user_id: str, filename: str, file_size: int, 
-                             duration: float, sample_rate: int, channels: int = 2, 
-                             bit_depth: str = "16 bits", upload_timestamp: str = None) -> str:
+    
+    def create_audio_metadata(self, user_id: str, filename: str, file_size: int, 
+                            duration: float, sample_rate: int, channels: int = 2, 
+                            bit_depth: str = "16 bits", upload_timestamp: str = None) -> str:
         """
         Store metadata about an uploaded audio file
         
@@ -50,9 +51,9 @@ class DatabaseService:
         
         # Push data to Firebase
         self.db_ref.child('audio_metadata').child(metadata_id).set(metadata)
-        
         return metadata_id
-          def create_analysis_result(self, metadata_id: str, is_deepfake: bool, 
+    
+    def create_analysis_result(self, metadata_id: str, is_deepfake: bool, 
                               confidence_score: float, features_used: List[str], 
                               analysis_timestamp: str = None) -> str:
         """
@@ -197,7 +198,8 @@ class DatabaseService:
             List of created analysis IDs
         """
         analysis_ids = []
-          # Create dummy audio metadata
+        
+        # Create dummy audio metadata
         dummy_files = [
             {"name": "audio_clip_10.wav", "size": 1245670, "duration": 15.3, "sample_rate": 44100, "date": "2025-02-07", "is_fake": False, "confidence": 0.97},
             {"name": "audio_clip_09.mp3", "size": 3456700, "duration": 32.4, "sample_rate": 48000, "date": "2025-02-01", "is_fake": True, "confidence": 0.75},
@@ -212,9 +214,9 @@ class DatabaseService:
                 file_size=file["size"],
                 duration=file["duration"],
                 sample_rate=file["sample_rate"],
-                upload_timestamp=file["date"]
-            )
-              # Create analysis result
+                upload_timestamp=file["date"]            )
+            
+            # Create analysis result
             is_fake = file["is_fake"]
             confidence = file["confidence"]
             features = ["mfcc", "spectral_centroid", "zero_crossing_rate", "spectral_rolloff"]

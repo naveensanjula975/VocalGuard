@@ -58,9 +58,9 @@ export default function ResultPage() {
               : 1 - data.confidence_score,
             timestamp: data.analysis_timestamp,
             metadata_id: data.metadata_id,
-            analysis_id: data.id,
-            details_id: data.details?.id,
+            analysis_id: data.id,            details_id: data.details?.id,
             analysisTime: data.details?.processing_time || "Unknown",
+            modelUsed: data.model_used === "wav2vec2" ? "Wav2Vec2 (Advanced)" : "Standard",
 
             // Format details for display
             details: [],
@@ -68,9 +68,7 @@ export default function ResultPage() {
 
           // Add details if available
           if (data.details?.feature_scores) {
-            const scores = data.details.feature_scores;
-
-            if (scores.mfcc_score !== undefined) {
+            const scores = data.details.feature_scores;            if (scores.mfcc_score !== undefined) {
               formattedResult.details.push({
                 label: "Voice Pattern Analysis",
                 value: scores.mfcc_score > 0.5 ? "Artificial" : "Natural",
@@ -89,6 +87,30 @@ export default function ResultPage() {
                   scores.spectral_score > 0.5
                     ? "Unusual frequency distribution detected"
                     : "Frequency distribution within expected human range",
+              });
+            }
+            
+            // Add Wav2Vec2-specific analysis if available
+            if (scores.wav2vec2_score !== undefined && scores.wav2vec2_score > 0) {
+              formattedResult.details.push({
+                label: "Neural Pattern Analysis",
+                value: scores.wav2vec2_score > 0.5 ? "AI Detected" : "Human Likely",
+                description:
+                  scores.wav2vec2_score > 0.5
+                    ? "Neural network detected patterns consistent with AI generation"
+                    : "Neural patterns more consistent with human speech",
+              });
+            }
+            
+            // Add temporal analysis if available
+            if (scores.temporal_score !== undefined) {
+              formattedResult.details.push({
+                label: "Temporal Coherence",
+                value: scores.temporal_score > 0.5 ? "Inconsistent" : "Consistent",
+                description:
+                  scores.temporal_score > 0.5
+                    ? "Time-based patterns show potential synthesis artifacts"
+                    : "Time-based patterns show natural human speech variation",
               });
             }
           }

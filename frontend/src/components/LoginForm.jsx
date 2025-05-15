@@ -1,17 +1,25 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 
 const LoginForm = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, authError, setAuthError } = useAuth();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  
+  // When component mounts, clear any auth errors
+  useEffect(() => {
+    if (authError) {
+      setError(authError);
+      setAuthError(null);
+    }
+  }, [authError, setAuthError]);
 
   const getErrorMessage = (errorCode) => {
     switch (errorCode) {
@@ -27,14 +35,15 @@ const LoginForm = () => {
         return "Invalid email or password";
     }
   };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
 
     try {
+      console.log("Attempting login with:", formData.email);
       const response = await api.login(formData);
+      console.log("Login response:", response);
 
       // Login the user
       login({
@@ -44,9 +53,11 @@ const LoginForm = () => {
         email: response.email,
       });
 
+      console.log("Login successful, navigating to upload page");
       // Redirect to upload page
       navigate("/upload");
     } catch (err) {
+      console.error("Login error:", err);
       const errorMessage =
         err.message && err.message.includes("FIREBASE_ERROR:")
           ? getErrorMessage(err.message.split("FIREBASE_ERROR:")[1].trim())

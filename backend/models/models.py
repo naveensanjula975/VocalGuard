@@ -64,17 +64,32 @@ class DeepFakeDetector(nn.Module):
     """
     Neural network model for deepfake audio detection.
     Takes audio features as input and outputs a probability of the audio being fake.
+    Supports both traditional features and Wav2Vec2 features.
     """
-    def __init__(self, input_features=128, hidden_dim=64):
+    def __init__(self, input_features=851, hidden_dim=128):
+        """
+        Initialize the DeepFake detector model.
+        
+        Args:
+            input_features: Size of input features (default: 851)
+                - 768 (Wav2Vec2) + 80 (MFCC mean & var) + 3 (spectral features)
+            hidden_dim: Size of hidden layers (default: 128)
+        """
         super(DeepFakeDetector, self).__init__()
         self.model = nn.Sequential(
             nn.Linear(input_features, hidden_dim),
             nn.ReLU(),
-            nn.Dropout(0.2),
+            nn.BatchNorm1d(hidden_dim),
+            nn.Dropout(0.3),
             nn.Linear(hidden_dim, hidden_dim // 2),
             nn.ReLU(),
+            nn.BatchNorm1d(hidden_dim // 2),
+            nn.Dropout(0.3),
+            nn.Linear(hidden_dim // 2, hidden_dim // 4),
+            nn.ReLU(),
+            nn.BatchNorm1d(hidden_dim // 4),
             nn.Dropout(0.2),
-            nn.Linear(hidden_dim // 2, 1),
+            nn.Linear(hidden_dim // 4, 1),
             nn.Sigmoid()
         )
     
