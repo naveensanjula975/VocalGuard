@@ -263,23 +263,25 @@ const Result = ({ result: propResult }) => {
                 Detailed Analysis
               </h2>
               <div className="grid grid-cols-2 gap-3">
-                {result.details.map((detail, index) => (
-                  <div
-                    key={index}
-                    className="p-3 bg-white rounded-lg shadow-sm">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-gray-900">
-                        {detail.label}
-                      </span>
-                      <span className="text-gray-600">{detail.value}</span>
+                {(Array.isArray(result.details) ? result.details : []).map(
+                  (detail, index) => (
+                    <div
+                      key={index}
+                      className="p-3 bg-white rounded-lg shadow-sm">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium text-gray-900">
+                          {detail.label}
+                        </span>
+                        <span className="text-gray-600">{detail.value}</span>
+                      </div>
+                      {detail.description && (
+                        <p className="mt-1 text-sm text-gray-500">
+                          {detail.description}
+                        </p>
+                      )}
                     </div>
-                    {detail.description && (
-                      <p className="mt-1 text-sm text-gray-500">
-                        {detail.description}
-                      </p>
-                    )}
-                  </div>
-                ))}
+                  )
+                )}
               </div>
             </div>
             {/* Technical Analysis Section */}

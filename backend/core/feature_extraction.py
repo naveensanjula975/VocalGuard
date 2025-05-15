@@ -129,6 +129,10 @@ def _get_wav2vec2():
         
         # Set model to evaluation mode
         _wav2vec2_model.eval()
+        
+        # Enable gradient checkpointing if needed (fixes deprecation warning)
+        if hasattr(_wav2vec2_model, "gradient_checkpointing_enable"):
+            _wav2vec2_model.gradient_checkpointing_enable()
     
     return _wav2vec2_model, _wav2vec2_processor
 

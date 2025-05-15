@@ -25,7 +25,6 @@ export default function ResultPage() {
     // If we have an ID parameter, try to fetch the analysis
     const fetchAnalysis = async () => {
       if (!id || !user?.token) return;
-
       setLoading(true);
       try {
         const data = await api.getAnalysisById(id, user.token);
@@ -47,28 +46,24 @@ export default function ResultPage() {
               : "Unknown",
             bitDepth: "16 bits", // Default for most audio files
             channels: "2 (Stereo)", // Default assumption
-
-            // For component compatibility, need both is_fake and isAI properties
             is_fake: data.is_deepfake,
             isAI: data.is_deepfake,
-
             confidence: data.confidence_score * 100, // Convert to percentage
             probability: data.is_deepfake
               ? data.confidence_score
               : 1 - data.confidence_score,
             timestamp: data.analysis_timestamp,
             metadata_id: data.metadata_id,
-            analysis_id: data.id,            details_id: data.details?.id,
+            analysis_id: data.id,
+            details_id: data.details?.id,
             analysisTime: data.details?.processing_time || "Unknown",
             modelUsed: data.model_used === "wav2vec2" ? "Wav2Vec2 (Advanced)" : "Standard",
-
-            // Format details for display
             details: [],
           };
-
           // Add details if available
           if (data.details?.feature_scores) {
-            const scores = data.details.feature_scores;            if (scores.mfcc_score !== undefined) {
+            const scores = data.details.feature_scores;
+            if (scores.mfcc_score !== undefined) {
               formattedResult.details.push({
                 label: "Voice Pattern Analysis",
                 value: scores.mfcc_score > 0.5 ? "Artificial" : "Natural",
@@ -78,7 +73,6 @@ export default function ResultPage() {
                     : "Patterns match typical human speech characteristics",
               });
             }
-
             if (scores.spectral_score !== undefined) {
               formattedResult.details.push({
                 label: "Frequency Analysis",
@@ -89,8 +83,6 @@ export default function ResultPage() {
                     : "Frequency distribution within expected human range",
               });
             }
-            
-            // Add Wav2Vec2-specific analysis if available
             if (scores.wav2vec2_score !== undefined && scores.wav2vec2_score > 0) {
               formattedResult.details.push({
                 label: "Neural Pattern Analysis",
@@ -101,8 +93,6 @@ export default function ResultPage() {
                     : "Neural patterns more consistent with human speech",
               });
             }
-            
-            // Add temporal analysis if available
             if (scores.temporal_score !== undefined) {
               formattedResult.details.push({
                 label: "Temporal Coherence",
@@ -114,7 +104,6 @@ export default function ResultPage() {
               });
             }
           }
-
           // If we don't have any details, add a default one
           if (formattedResult.details.length === 0) {
             formattedResult.details.push({
@@ -125,7 +114,6 @@ export default function ResultPage() {
                 : "Natural human voice characteristics detected",
             });
           }
-
           setAnalysisData(formattedResult);
         }
       } catch (err) {
@@ -135,7 +123,6 @@ export default function ResultPage() {
         setLoading(false);
       }
     };
-
     fetchAnalysis();
   }, [id, user, initialResult]);
 
@@ -146,7 +133,6 @@ export default function ResultPage() {
       </div>
     );
   }
-
   if (error) {
     return (
       <div className="max-w-3xl mx-auto my-12 p-8 bg-red-50 rounded-lg text-center">
@@ -154,7 +140,6 @@ export default function ResultPage() {
       </div>
     );
   }
-
   return (
     <div>
       <Result result={analysisData} />
