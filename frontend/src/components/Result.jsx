@@ -11,19 +11,22 @@ import {
   WhatsappIcon,
 } from "react-share";
 
-// Dummy data for demonstration
+// Dummy data for demonstration as a fallback
 const dummyResult = {
   fileName: "sample_audio.mp3",
   duration: "2:45",
   fileSize: "3.2 MB",
   format: "MP3",
-  isAI: false,
-  confidence: 95,
+  is_fake: false,
+  confidence: 0.95,
+  probability: 0.05,
   timestamp: new Date().toISOString(),
+  metadata_id: "demo-id-1234",
+  analysis_id: "demo-analysis-5678",
+  details_id: "demo-details-9012",
   sampleRate: "44.1 kHz",
-  bitDepth: "16 bits",
-  channels: "2 (Stereo)",
   analysisTime: "2450",
+  modelUsed: "Standard",
   details: [
     {
       label: "Voice Pattern Analysis",
@@ -48,10 +51,10 @@ const dummyResult = {
   ],
 };
 
-const Result = () => {
+const Result = ({ result: propResult }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const result = location.state?.result || dummyResult;
+  const result = propResult || location.state?.result || dummyResult;
   const pdfRef = useRef();
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
@@ -62,7 +65,7 @@ const Result = () => {
 
   const shareUrl = window.location.href;
   const shareTitle = `VocalGuard Analysis Result: ${
-    result.isAI ? "AI Generated" : "Human Voice"
+    result.is_fake ? "AI Generated" : "Human Voice"
   }`;
 
   const formatDate = (date) => {
@@ -201,8 +204,7 @@ const Result = () => {
                   <p className="font-medium">{result.format}</p>
                 </div>
               </div>
-            </div>
-
+            </div>{" "}
             {/* Analysis Result Section */}
             <div className="p-4 rounded-lg bg-gray-50">
               <h2 className="mb-3 text-lg font-semibold text-gray-900">
@@ -213,51 +215,94 @@ const Result = () => {
                   <div className="h-2 overflow-hidden bg-gray-200 rounded-full">
                     <div
                       className={`h-full rounded-full transition-all duration-500 ${
-                        result.isAI ? "bg-red-500" : "bg-green-500"
+                        result.is_fake ? "bg-red-500" : "bg-green-500"
                       }`}
-                      style={{ width: `${result.confidence}%` }}></div>
-                  </div>
+                      style={{
+                        width: `${
+                          result.confidence ? result.confidence * 100 : 0
+                        }%`,
+                      }}></div>
+                  </div>{" "}
                   <p className="mt-2 text-sm text-gray-500">
-                    Confidence: {result.confidence}%
+                    Confidence:{" "}
+                    {result.confidence !== undefined
+                      ? typeof result.confidence === "number" &&
+                        result.confidence <= 1
+                        ? `${Math.round(result.confidence * 100)}%`
+                        : `${Math.round(result.confidence)}%`
+                      : "N/A"}
                   </p>
                 </div>
                 <div
                   className={`ml-4 px-4 py-2 rounded-full ${
-                    result.isAI
+                    result.is_fake
                       ? "bg-red-100 text-red-800"
                       : "bg-green-100 text-green-800"
                   }`}>
-                  {result.isAI ? "AI Generated" : "Human Voice"}
+                  {result.is_fake ? "AI Generated" : "Human Voice"}
                 </div>
-              </div>
+              </div>{" "}
+              {/* Analysis IDs - Show for logged-in users and for debugging */}
+              {(result.metadata_id || result.analysis_id) && (
+                <div className="mt-3 text-xs text-gray-400">
+                  <p>
+                    Analysis Reference:{" "}
+                    {result.analysis_id
+                      ? result.analysis_id.substring(0, 8) + "..."
+                      : "Not stored yet"}
+                  </p>
+                  <p className="text-xs text-gray-300">
+                    You can access this analysis later from your history page.
+                  </p>
+                </div>
+              )}
             </div>
-
             {/* Detailed Analysis Section */}
             <div className="p-4 rounded-lg bg-gray-50">
               <h2 className="mb-3 text-lg font-semibold text-gray-900">
                 Detailed Analysis
-              </h2>
-              <div className="grid grid-cols-2 gap-3">
-                {result.details.map((detail, index) => (
-                  <div
-                    key={index}
-                    className="p-3 bg-white rounded-lg shadow-sm">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-gray-900">
-                        {detail.label}
-                      </span>
-                      <span className="text-gray-600">{detail.value}</span>
+              </h2>              <div className="grid grid-cols-2 gap-3">
+                {/* Handle standard details */}
+                {(Array.isArray(result.details) ? result.details : []).map(
+                  (detail, index) => (
+                    <div
+                      key={index}
+                      className="p-3 bg-white rounded-lg shadow-sm">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium text-gray-900">
+                          {detail.label}
+                        </span>
+                        <span className="text-gray-600">{detail.value}</span>
+                      </div>
+                      {detail.description && (
+                        <p className="mt-1 text-sm text-gray-500">
+                          {detail.description}
+                        </p>
+                      )}
                     </div>
-                    {detail.description && (
+                  )
+                )}
+                
+                {/* Handle Hiya API details if present */}
+                {result.hiya_details && result.hiya_details.scores && Object.entries(result.hiya_details.scores).map(
+                  ([key, value], index) => (
+                    <div
+                      key={`hiya-${index}`}
+                      className="p-3 bg-white rounded-lg shadow-sm border-l-4 border-blue-500">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium text-gray-900">
+                          {key.replace(/_/g, ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                        </span>
+                        <span className="text-gray-600">{(value * 100).toFixed(1)}%</span>
+                      </div>
                       <p className="mt-1 text-sm text-gray-500">
-                        {detail.description}
+                        {key.includes('score') ? 'Analysis score from Hiya Audio Intelligence' : 'Detailed score factor from Hiya analysis'}
                       </p>
-                    )}
-                  </div>
-                ))}
+                    </div>
+                  )
+                )}
               </div>
             </div>
-
             {/* Technical Analysis Section */}
             <div className="p-4 rounded-lg bg-gray-50">
               <h2 className="mb-3 text-lg font-semibold text-gray-900">
@@ -271,7 +316,7 @@ const Result = () => {
                 <div>
                   <p className="text-sm text-gray-500">Bit Depth</p>
                   <p className="font-medium">{result.bitDepth}</p>
-                </div>
+                </div>{" "}
                 <div>
                   <p className="text-sm text-gray-500">Channels</p>
                   <p className="font-medium">{result.channels}</p>
@@ -280,11 +325,36 @@ const Result = () => {
                   <p className="text-sm text-gray-500">Analysis Time</p>
                   <p className="font-medium">{result.analysisTime} ms</p>
                 </div>
+                <div>
+                  <p className="text-sm text-gray-500">Model Used</p>
+                  <p className="font-medium">                    {result.modelUsed || "Standard"}
+                    {result.modelUsed === "Wav2Vec2 (Advanced)" && (
+                      <span className="inline-flex ml-1 px-1.5 py-0.5 text-xs font-medium bg-purple-100 text-purple-800 rounded">
+                        AI
+                      </span>
+                    )}
+                    {result.modelUsed === "Hiya Audio Intelligence" && (
+                      <span className="inline-flex ml-1 px-1.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 rounded">
+                        External API
+                      </span>
+                    )}
+                  </p>
+                </div>
               </div>
             </div>
-
             {/* Action Buttons */}
-            <div className="flex justify-end gap-4">
+            <div className="flex flex-wrap justify-end gap-4">
+              {result.analysis_id && (
+                <button
+                  onClick={() => navigate(`/analysis/${result.analysis_id}`)}
+                  title="View advanced visualization and detailed feature analysis"
+                  className="relative px-4 py-2 font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 group">
+                  View Detailed Analysis
+                  <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-1 text-xs font-medium text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
+                    See advanced visualizations and in-depth feature analysis
+                  </span>
+                </button>
+              )}
               <button
                 onClick={generatePDF}
                 disabled={isGeneratingPDF}
@@ -306,7 +376,6 @@ const Result = () => {
                 Back to Home
               </button>
             </div>
-
             {/* Share Section - This will be excluded from PDF */}
             <div className="pt-6 mt-8 border-t border-gray-200 react-share__ShareButton">
               <h3 className="mb-4 text-lg font-semibold text-gray-900">

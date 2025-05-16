@@ -2,8 +2,10 @@ Node.js
 node_modules/
 build/
 
-Environment variables
+# Environment variables
 .env
+# But keep the example template
+!.env.example
 
 .github/workflows/google-cloud-run.yml
 .github/workflows/firebase-hosting.yml
@@ -15,3 +17,4 @@ serviceAccountKey.json
 backend/__pycache__/
 backend/__init__.py
 
+backend/cache
