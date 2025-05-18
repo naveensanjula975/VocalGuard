@@ -18,3 +18,5 @@ backend/__pycache__/
 backend/__init__.py
 
 backend/cache
+backend/models/deepfake_audio_model/
+backend/.env.actual

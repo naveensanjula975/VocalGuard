@@ -108,11 +108,10 @@ async def detect_deepfake_endpoint(
               # Extract audio info
         filename = file.filename
         file_size = len(contents)
+          # Process the file with our deepfake detection logic and store results
+        result = detect_deepfake(temp_file.name, user_id=user_id, store_results=True, filename=filename)
         
-        # Process the file with our deepfake detection logic and store results
-        result = detect_deepfake(temp_file.name, user_id=user_id, store_results=True)
-        
-        # Add filename to result
+        # Ensure filename is in the result
         result["filename"] = filename
         
         return result
@@ -146,11 +145,9 @@ async def detect_deepfake_advanced_endpoint(
               # Extract audio info
         filename = file.filename
         file_size = len(contents)
-        
-        # Process the file with our deepfake detection logic with Wav2Vec2 and store results
-        result = detect_deepfake(temp_file.name, user_id=user_id, store_results=True, use_wav2vec2=True)
-        
-        # Add filename and model info to result
+          # Process the file with our deepfake detection logic with Wav2Vec2 and store results
+        result = detect_deepfake(temp_file.name, user_id=user_id, store_results=True, filename=filename)
+          # Add filename and model info to result
         result["filename"] = filename
         result["model_used"] = "wav2vec2"
         
@@ -165,42 +162,6 @@ async def detect_deepfake_advanced_endpoint(
         # Clean up the temporary file
         temp_file.close()
         os.unlink(temp_file.name)
-
-@app.post("/detect-deepfake-hiya/")
-async def detect_deepfake_hiya_endpoint(
-    file: UploadFile = File(...),
-    token_data: dict = Depends(verify_token)
-):
-    """
-    Endpoint using Hiya's Audio Intelligence API to detect if an audio file is a deepfake
-    """
-    user_id = token_data["uid"]
-    
-    # Save the uploaded file to a temporary location
-    temp_file = tempfile.NamedTemporaryFile(delete=False)
-    try:
-        contents = await file.read()
-        with open(temp_file.name, 'wb') as f:
-            f.write(contents)
-              # Extract audio info
-        filename = file.filename
-        file_size = len(contents)
-        
-        # Process the file with Hiya's API and store results
-        result = detect_deepfake(temp_file.name, user_id=user_id, store_results=True, use_hiya_api=True)
-        
-        # Add filename to result
-        result["filename"] = filename
-        
-        return result
-    except Exception as e:
-        print(f"Error processing audio with Hiya API: {str(e)}")
-        return JSONResponse(
-            status_code=500,
-            content={"error": f"Failed to process audio with Hiya API: {str(e)}"}
-        )
-    finally:
-        # Clean up the temporary file
         temp_file.close()
         os.unlink(temp_file.name)
 

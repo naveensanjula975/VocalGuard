@@ -1,7 +1,7 @@
 # Wav2Vec2 Integration Summary
 
 ## Overview
-This document summarizes the integration of Wav2Vec2, a powerful pre-trained audio model, as a feature extractor for VocalGuard's deepfake detection system.
+This document summarizes the integration of Wav2Vec2, a powerful pre-trained audio model, as a feature extractor for VocalGuard's deepfake detection system. The latest implementation uses the Wav2Vec2-XLSR model with safetensors for direct classification of deepfake audio.
 
 ## Components Updated
 
@@ -21,34 +21,59 @@ This document summarizes the integration of Wav2Vec2, a powerful pre-trained aud
 
 ### 3. Detection Logic
 - **File**: `core/detect_deepfake.py`
-  - Added `use_wav2vec2` parameter to control feature extraction mode
-  - Enhanced feature scores calculation to provide Wav2Vec2-specific metrics
-  - Fixed indentation issues
-  - Updated feature_used list to reflect when Wav2Vec2 is used
+  - Added new `DeepfakeAudioDetector` class for direct classification
+  - Implemented robust audio preprocessing with multiple fallbacks
+  - Added support for the safetensors model format
+  - Provided detailed probability distribution in results
+  - Updated model version to 3.0.0
 
 ### 4. API Endpoints
 - **File**: `main.py`
-  - Created new `/detect-deepfake-advanced/` endpoint specifically for Wav2Vec2
-  - Updated results to include model information
+  - Updated `/detect-deepfake/` endpoint to use the safetensors model
+  - Simplified parameter handling for better file processing
+  - Enhanced error handling and reporting
 
 ### 5. Frontend Integration
 - **File**: `services/api.js`
-  - Added `detectDeepfakeAdvanced()` function to support new endpoint
+  - Updated API call handling for the new model
 
 - **File**: `components/UploadBox.jsx`
-  - Added toggle UI for users to choose between standard and advanced analysis
+  - Updated UI to show the use of the advanced model
   - Enhanced results to include model information
 
-- **File**: `pages/ResultPage.jsx`
-  - Added support for Wav2Vec2-specific analysis results
-
 - **File**: `components/Result.jsx`
-  - Updated Technical Details section to display model information
+  - Updated to display WAV2VEC2-XLSR model results
+  - Added visualization for probability distribution
+  - Added special badge for the advanced model
 
-### 6. Setup & Documentation
-- Created `setup_wav2vec2.bat` and `setup_wav2vec2.sh` scripts
-- Added test script `test_wav2vec2.py`
-- Updated README with Wav2Vec2 integration details
+### 6. Testing & Validation
+- **File**: `scripts/test_huggingface_model.py`
+  - Created basic test script for quick model verification
+  - Tests model loading and inference on sample audio files
+
+- **File**: `scripts/test_huggingface_model_enhanced.py`
+  - Advanced test script with batch processing capabilities
+  - Generates visualizations and detailed statistics
+  - Creates JSON reports for detailed analysis
+
+- **File**: `scripts/validate_model.py`
+  - Validates model configuration, files, and structure
+  - Checks GPU support and performance
+  - Provides comprehensive validation of the model setup
+
+- **File**: `scripts/preprocess_audio.py`
+  - Preprocesses audio files for optimal model compatibility
+  - Converts to required sample rate and format
+  - Batch processing support for multiple files
+
+### 7. Setup & Documentation
+- Updated `setup_wav2vec2.bat` and `setup_wav2vec2.sh` scripts for the new model
+- Created test batch files for easy verification:
+  - `test_huggingface_model.bat` - Basic testing
+  - `run_enhanced_tests.bat` - Comprehensive testing with visualization
+  - `validate_model.bat` - Model validation
+  - `preprocess_audio.bat` - Audio preprocessing utility
+- Updated README and documentation
 
 ## Feature Highlights
 
