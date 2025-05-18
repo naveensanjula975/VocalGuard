@@ -348,56 +348,112 @@ const Result = ({ result: propResult }) => {
                   </p>
                 </div>
               </div>
-            </div>
-            {/* Action Buttons */}
-            <div className="flex flex-wrap justify-end gap-4">
+            </div>            {/* Action Buttons */}
+            <div className="flex flex-wrap justify-end gap-3 mt-6">
               {result.analysis_id && (
                 <button
                   onClick={() => navigate(`/analysis/${result.analysis_id}`)}
                   title="View advanced visualization and detailed feature analysis"
-                  className="relative px-4 py-2 font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 group">
-                  View Detailed Analysis
-                  <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-1 text-xs font-medium text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
+                  className="relative flex items-center justify-center gap-2 px-4 py-2.5 font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 active:bg-indigo-800 transform transition-all duration-200 shadow-sm hover:shadow-md group">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                  </svg>
+                  Detailed Analysis
+                  <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-1 text-xs font-medium text-white bg-gray-800 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap shadow-lg z-10">
                     See advanced visualizations and in-depth feature analysis
                   </span>
                 </button>
-              )}
-              <button
+              )}              <button
                 onClick={generatePDF}
                 disabled={isGeneratingPDF}
-                className={`px-4 py-2 font-medium text-white rounded-lg ${
+                className={`flex items-center justify-center gap-2 px-4 py-2.5 font-medium text-white rounded-lg shadow-sm transition-all duration-200 ${
                   isGeneratingPDF
-                    ? "bg-blue-400 cursor-not-allowed"
-                    : "bg-blue-600 hover:bg-blue-700"
-                }`}>
-                {isGeneratingPDF ? "Generating PDF..." : "Download PDF"}
-              </button>
-              <button
+                    ? "bg-teal-400 cursor-not-allowed"
+                    : "bg-teal-600 hover:bg-teal-700 active:bg-teal-800 hover:shadow-md"
+                }`}
+                title="Download a PDF copy of this report">
+                {isGeneratingPDF ? (
+                  <>
+                    <svg className="w-5 h-5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                      <polyline points="7 10 12 15 17 10"></polyline>
+                      <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Download PDF
+                  </>
+                )}
+              </button>              <button
                 onClick={() => navigate("/upload")}
-                className="px-4 py-2 font-medium text-gray-700 hover:text-gray-900">
+                className="flex items-center justify-center gap-2 px-4 py-2.5 font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:border-slate-400 active:bg-slate-100 transition-all duration-200 shadow-sm hover:shadow-md"
+                title="Upload a new audio file for analysis">
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="17 8 12 3 7 8"></polyline>
+                  <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
                 Upload Another
-              </button>
-              <button
+              </button>              <button
                 onClick={() => navigate("/")}
-                className="px-4 py-2 font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700">
+                className="flex items-center justify-center gap-2 px-4 py-2.5 font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 active:bg-purple-800 transform transition-all duration-200 shadow-sm hover:shadow-md"
+                title="Return to the homepage">
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                  <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                </svg>
                 Back to Home
               </button>
-            </div>
-            {/* Share Section - This will be excluded from PDF */}
+            </div>            {/* Share Section - This will be excluded from PDF */}
             <div className="pt-6 mt-8 border-t border-gray-200 react-share__ShareButton">
-              <h3 className="mb-4 text-lg font-semibold text-gray-900">
+              <h3 className="mb-4 text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-purple-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="18" cy="5" r="3"></circle>
+                  <circle cx="6" cy="12" r="3"></circle>
+                  <circle cx="18" cy="19" r="3"></circle>
+                  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                  <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                </svg>
                 Share Results
               </h3>
-              <div className="flex gap-4">
-                <FacebookShareButton url={shareUrl} quote={shareTitle}>
-                  <FacebookIcon size={32} round />
+              <div className="flex flex-wrap gap-4">
+                <FacebookShareButton url={shareUrl} quote={shareTitle} className="transition-transform hover:scale-110">
+                  <FacebookIcon size={40} round />
                 </FacebookShareButton>
-                <TwitterShareButton url={shareUrl} title={shareTitle}>
-                  <TwitterIcon size={32} round />
+                <TwitterShareButton url={shareUrl} title={shareTitle} className="transition-transform hover:scale-110">
+                  <TwitterIcon size={40} round />
                 </TwitterShareButton>
-                <WhatsappShareButton url={shareUrl} title={shareTitle}>
-                  <WhatsappIcon size={32} round />
+                <WhatsappShareButton url={shareUrl} title={shareTitle} className="transition-transform hover:scale-110">
+                  <WhatsappIcon size={40} round />
                 </WhatsappShareButton>
+                <button 
+                  onClick={() => {
+                    navigator.clipboard.writeText(shareUrl);
+                    // Add a more user-friendly notification using state
+                    const notification = document.createElement('div');
+                    notification.className = 'fixed bottom-4 right-4 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg transition-opacity duration-300';
+                    notification.textContent = 'Link copied to clipboard!';
+                    document.body.appendChild(notification);
+                    setTimeout(() => {
+                      notification.style.opacity = '0';
+                      setTimeout(() => document.body.removeChild(notification), 300);
+                    }, 2000);
+                  }}
+                  className="flex items-center justify-center w-10 h-10 text-white bg-gray-600 rounded-full hover:bg-gray-700 active:bg-gray-800 transition-all duration-200 hover:scale-110"
+                  title="Copy link to clipboard"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                  </svg>
+                </button>
               </div>
             </div>
           </div>
