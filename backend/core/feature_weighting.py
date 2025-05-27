@@ -17,3 +17,9 @@ DEFAULT_WEIGHTS = {
     'mfcc': 0.2,
     'spectral': 0.1
 }
+# Cache directory
+_cache_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "cache")
+_weights_file = os.path.join(_cache_dir, "feature_weights.json")
+
+# Global weights
+_feature_weights = DEFAULT_WEIGHTS.copy()
