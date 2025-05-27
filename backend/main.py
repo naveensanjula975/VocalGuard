@@ -1,12 +1,15 @@
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
 from firebase_admin import auth
-from models import UserSignUp, UserLogin
-import firebase_config
+from models import UserSignUp, UserLogin, AudioDetectionResult
+from services.firebase_config import initialize_firebase
+from core.detect_deepfake import detect_deepfake
 import requests
 import json
 import os
+import tempfile
+import uuid
 
 app = FastAPI()
 
@@ -21,7 +24,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # frontend URL
+    allow_origins=["http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -102,6 +105,86 @@ async def verify_token(authorization: str = Depends(oauth2_scheme)):
 @app.get("/protected")
 async def protected_route(token_data: dict = Depends(verify_token)):
     return {"message": "This is a protected route", "user_id": token_data["uid"]}
+
+@app.post("/detect-deepfake", response_model=AudioDetectionResult)
+async def detect_deepfake_endpoint(
+    file: UploadFile = File(...),
+    user_id: str = Form(None),
+    store_results: bool = Form(False),
+    threshold: float = Form(0.5)
+):
+    """
+    Upload an audio file and detect if it's a deepfake
+    """
+    # Check file type
+    if not file.content_type.startswith('audio/'):
+        raise HTTPException(status_code=400, detail="File must be an audio file")
+    
+    # Create temporary file
+    temp_dir = tempfile.gettempdir()
+    temp_filename = f"audio_{uuid.uuid4().hex}_{file.filename}"
+    temp_path = os.path.join(temp_dir, temp_filename)
+    
+    try:
+        # Save uploaded file to temporary location
+        with open(temp_path, "wb") as temp_file:
+            content = await file.read()
+            temp_file.write(content)
+        
+        # Detect deepfake
+        result = detect_deepfake(
+            audio_path=temp_path,
+            user_id=user_id,
+            store_results=store_results,
+            filename=file.filename
+        )
+        
+        # Check if there was an error
+        if "error" in result:
+            raise HTTPException(status_code=500, detail=result["error"])
+        
+        return AudioDetectionResult(**result)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error processing audio file: {str(e)}")
+    finally:
+        # Clean up temporary file
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+
+@app.get("/")
+async def root():
+    return {"message": "VocalGuard API is running"}
+
+@app.get("/health")
+async def health_check():
+    """
+    Health check endpoint that also verifies model availability
+    """
+    try:
+        from core.detect_deepfake import MODEL_DIR
+        import os
+        
+        model_exists = os.path.exists(MODEL_DIR)
+        config_exists = os.path.exists(os.path.join(MODEL_DIR, "config.json"))
+        safetensors_exists = os.path.exists(os.path.join(MODEL_DIR, "model.safetensors"))
+        
+        return {
+            "status": "healthy",
+            "model_directory": MODEL_DIR,
+            "model_available": model_exists and config_exists and safetensors_exists,
+            "files": {
+                "config.json": config_exists,
+                "model.safetensors": safetensors_exists
+            }
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": str(e)
+        }
 
 if __name__ == "__main__":
     import uvicorn

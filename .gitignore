@@ -13,5 +13,9 @@ backend/venv
 # Firebase
 serviceAccountKey.json
 backend/__pycache__/
-backend/__init__.py
 
+backend/models/deepfake_audio_model/
+backend/services/__pycache__/
+backend/models/__pycache__/
+backend/core/__pycache__/
+backend/services/database_service.py

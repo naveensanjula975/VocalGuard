@@ -13,9 +13,8 @@ from transformers import Wav2Vec2FeatureExtractor, AutoModelForAudioClassificati
 # Add the parent directory to system path to enable relative imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-# Updated relative imports
-from models.models import DeepFakeDetector
-from services.database_service import DatabaseService
+# Updated relative imports - removing unused imports
+# from services.database_service import DatabaseService
 
 # Model version for tracking
 MODEL_VERSION = "1.0.0"  
@@ -118,27 +117,15 @@ class DeepfakeAudioDetector:
         
         # Return results
         result = {
-            "prediction": self.id2label[pred_idx],
-            "confidence": confidence,
+            "prediction": self.id2label[pred_idx],            "confidence": confidence,
             "label_index": pred_idx,
             "probabilities": {self.id2label[i]: float(prob) for i, prob in enumerate(all_probs)},
             "is_fake": pred_idx == 1 if "fake" in self.id2label.values() else (confidence > threshold)
         }
         
         return result
-def load_model(model_path=None):
-    """
-    Load the pre-trained deepfake detection model
-    """
-    model = DeepFakeDetector()
-    
-    if model_path and os.path.exists(model_path):
-        model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
-    
-    model.eval()
-    return model
 
-def detect_deepfake(audio_path, user_id=None, store_results=True, filename=None):
+def detect_deepfake(audio_path, user_id=None, store_results=False, filename=None):
     """
     Detect if an audio file is a deepfake using the Wav2Vec2 model in /models/deepfake_audio_model/.
     
@@ -171,63 +158,12 @@ def detect_deepfake(audio_path, user_id=None, store_results=True, filename=None)
             "probabilities": detection_result["probabilities"],
             "filename": filename or os.path.basename(audio_path)
         }
-        
-        # Store results in Firebase if requested
+          # Store results in Firebase if requested (simplified for now)
         if store_results and user_id:
             try:
-                db_service = DatabaseService()
-                
-                # Get audio metadata
-                with open(audio_path, 'rb') as f:
-                    file_size = len(f.read())
-                
-                # Get audio duration and sample rate
-                try:
-                    audio_data, sample_rate = librosa.load(audio_path, sr=None)
-                    duration = librosa.get_duration(y=audio_data, sr=sample_rate)
-                except Exception as e:
-                    print(f"Error getting audio metadata: {e}")
-                    # Fallback values
-                    duration = 0
-                    sample_rate = 16000
-                
-                # Use provided filename or extract from path
-                if not filename:
-                    filename = os.path.basename(audio_path)
-                
-                # Save metadata in database
-                metadata_id = db_service.create_audio_metadata(
-                    user_id=user_id,
-                    filename=filename,
-                    file_size=file_size,
-                    duration=duration,
-                    sample_rate=sample_rate
-                )
-                
-                # Create analysis result
-                features_used = ["wav2vec2-xlsr"]
-                analysis_id = db_service.create_analysis_result(
-                    metadata_id=metadata_id,
-                    is_deepfake=result["is_fake"],
-                    confidence_score=result["confidence"],
-                    features_used=features_used
-                )
-                
-                # Create detailed results
-                feature_scores = {
-                    "probabilities": detection_result["probabilities"]
-                }
-                details_id = db_service.create_result_details(
-                    analysis_id=analysis_id,
-                    feature_scores=feature_scores,
-                    model_version=MODEL_VERSION,
-                    processing_time=processing_time
-                )
-                
-                # Add IDs to the result
-                result["metadata_id"] = metadata_id
-                result["analysis_id"] = analysis_id
-                result["details_id"] = details_id
+                # For now, just log that we would store results
+                print(f"Would store results for user {user_id}: {result}")
+                # TODO: Implement database storage when DatabaseService is available
                 
             except Exception as db_error:
                 print(f"Error storing results in database: {db_error}")
