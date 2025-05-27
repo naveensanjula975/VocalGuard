@@ -4,6 +4,7 @@ build/
 
 # Environment variables
 .env
+.env.actual
 # But keep the example template
 !.env.example
 
@@ -18,3 +19,8 @@ backend/__pycache__/
 backend/__init__.py
 
 backend/cache
+backend/models/deepfake_audio_model/
+backend/.env.actual
+backend/data/
+backend/core/__pycache__/
+backend/services/__pycache__/
