@@ -245,5 +245,5 @@ def detect_deepfake(audio_path, user_id=None, store_results=True, filename=None)
             "label": "error",
             "model_used": "wav2vec2-xlsr-deepfake",
             "processing_time": 0,
-            "filename": filename or os.path.basename(audio_path) if audio_path else "unknown"
+            "filename": filename or (os.path.basename(audio_path) if audio_path else "unknown")
         }
