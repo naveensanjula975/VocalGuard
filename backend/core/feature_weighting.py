@@ -23,3 +23,20 @@ _weights_file = os.path.join(_cache_dir, "feature_weights.json")
 
 # Global weights
 _feature_weights = DEFAULT_WEIGHTS.copy()
+def load_weights():
+    """Load feature weights from disk"""
+    global _feature_weights
+    
+    if not os.path.exists(_cache_dir):
+        os.makedirs(_cache_dir, exist_ok=True)
+    
+    if os.path.exists(_weights_file):
+        try:
+            with open(_weights_file, 'r') as f:
+                _feature_weights = json.load(f)
+        except Exception:
+            # Silently fall back to default weights
+            _feature_weights = DEFAULT_WEIGHTS.copy()
+    else:
+        _feature_weights = DEFAULT_WEIGHTS.copy()
+        save_weights()
