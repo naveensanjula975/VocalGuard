@@ -204,3 +204,33 @@ def extract_features(audio_path, sr=16000, n_mfcc=40, use_wav2vec2=True):
         # Return a zero vector as fallback - adjusted for potential Wav2Vec2 features
         fallback_size = 768 + n_mfcc * 2 + 3 if use_wav2vec2 else n_mfcc * 2 + 3
         return np.zeros(fallback_size)
+    def extract_wav2vec2_features(waveform_or_path, audio_path=None, max_length=160000):
+        """
+    Extract features using the Wav2Vec2 model
+    
+    Args:
+        waveform_or_path: Audio waveform (16kHz) or path to audio file
+        audio_path: Path to the audio file (used for caching)
+        max_length: Maximum length of waveform in samples (default: 160000 = 10 seconds at 16kHz)
+        
+    Returns:
+        numpy.ndarray: Wav2Vec2 features
+    """
+    try:
+        # Get model and processor
+        model, processor = _get_wav2vec2()
+        
+        # Check if input is a file path or waveform
+        if isinstance(waveform_or_path, str):
+            # Load the audio file and resample to 16kHz
+            waveform, sr = librosa.load(waveform_or_path, sr=16000)
+        else:
+            waveform = waveform_or_path
+        
+        # Generate hash for caching
+        audio_hash = _get_audio_hash(audio_path) if audio_path else None
+        
+        # Check cache
+        if audio_hash and audio_hash in _wav2vec2_cache:
+            print(f"Using cached Wav2Vec2 embedding for {audio_path}")
+            return _wav2vec2_cache[audio_hash]['embedding']
