@@ -50,3 +50,35 @@ def load_weights():
     except Exception:
         # Silently continue if weights can't be saved
         pass
+    def calculate_audio_complexity(audio, sr):
+    """
+    Calculate audio complexity metrics to determine optimal feature weighting
+    
+    Args:
+        audio: Audio waveform
+        sr: Sample rate
+    
+    Returns:
+        float: Complexity score (0.0 to 1.0)
+    """
+    # Calculate spectral flatness (measure of noisiness vs. tonality)
+    spec_flat = np.mean(librosa.feature.spectral_flatness(y=audio))
+    
+    # Calculate spectral contrast (difference between peaks and valleys)
+    spec_contrast = librosa.feature.spectral_contrast(y=audio, sr=sr)
+    contrast_mean = np.mean(spec_contrast)
+    
+    # Calculate spectral bandwidth
+    bandwidth = np.mean(librosa.feature.spectral_bandwidth(y=audio, sr=sr))
+    norm_bandwidth = min(1.0, bandwidth / (sr / 4))  # Normalize by Nyquist freq / 2
+    
+    # Calculate zero crossing rate (measure of noisiness)
+    zcr = np.mean(librosa.feature.zero_crossing_rate(audio))
+    
+    # Combine metrics into a complexity score (0.0 to 1.0)
+    complexity = (spec_flat * 0.3 + contrast_mean * 0.3 + norm_bandwidth * 0.2 + zcr * 0.2)
+    
+    # Normalize to 0.0-1.0 range if needed
+    complexity = min(1.0, max(0.0, complexity))
+    
+    return complexity
