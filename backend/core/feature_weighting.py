@@ -118,3 +118,20 @@ def adjust_weights(audio, sr):
         }
     
     return weights
+def get_weights(audio=None, sr=None):
+    """
+    Get current feature weights, optionally adjusting for specific audio
+    
+    Args:
+        audio: Optional audio waveform
+        sr: Optional sample rate
+    
+    Returns:
+        dict: Feature weights
+    """
+    if audio is not None and sr is not None:
+        # Dynamically adjust weights for this audio
+        return adjust_weights(audio, sr)
+    else:
+        # Return global weights
+        return _feature_weights
