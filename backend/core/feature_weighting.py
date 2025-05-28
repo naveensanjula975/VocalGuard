@@ -40,3 +40,13 @@ def load_weights():
     else:
         _feature_weights = DEFAULT_WEIGHTS.copy()
         save_weights()
+        def save_weights():
+    """Save feature weights to disk"""
+    if not os.path.exists(_cache_dir):
+        os.makedirs(_cache_dir, exist_ok=True)
+    try:
+        with open(_weights_file, 'w') as f:
+            json.dump(_feature_weights, f)
+    except Exception:
+        # Silently continue if weights can't be saved
+        pass
