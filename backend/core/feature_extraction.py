@@ -45,3 +45,114 @@ def _get_audio_hash(audio_path):
         print(f"Error generating audio hash: {e}")
         # Fallback to just the file path
         return hashlib.md5(audio_path.encode()).hexdigest()
+    
+    def _load_cache():
+        """Load embedding cache from disk"""
+    global _wav2vec2_cache
+    
+    if not os.path.exists(_cache_dir):
+        os.makedirs(_cache_dir, exist_ok=True)
+        
+    if os.path.exists(_cache_file):
+        try:
+            with open(_cache_file, 'r') as f:
+                cache_data = json.load(f)
+                
+            # Convert lists back to numpy arrays
+            for key, value in cache_data.items():
+                if 'embedding' in value:
+                    value['embedding'] = np.array(value['embedding'])
+            _wav2vec2_cache = cache_data
+        except Exception as e:
+            # Silent fail for cache loading issues
+            _wav2vec2_cache = {}
+    else:
+        _wav2vec2_cache = {}
+
+def _save_cache():
+    """Save embedding cache to disk"""
+    if not _wav2vec2_cache:
+        return
+        
+    if not os.path.exists(_cache_dir):
+        os.makedirs(_cache_dir, exist_ok=True)
+    
+    try:
+        # Convert numpy arrays to lists for JSON serialization
+        cache_data = {}
+        for key, value in _wav2vec2_cache.items():
+            cache_data[key] = {
+                'timestamp': value['timestamp'],
+                'filename': value['filename']
+            }
+            if 'embedding' in value:
+                cache_data[key]['embedding'] = value['embedding'].tolist()
+        
+        with open(_cache_file, 'w') as f:
+            json.dump(cache_data, f)
+    except Exception:
+        # Silent fail for cache saving issues
+        pass
+
+def _trim_cache():
+    """Trim the cache to the maximum size by removing oldest entries"""
+    global _wav2vec2_cache
+    
+    if len(_wav2vec2_cache) <= _max_cache_size:
+        return
+        
+    # Sort by timestamp (oldest first)
+    sorted_items = sorted(_wav2vec2_cache.items(), key=lambda x: x[1]['timestamp'])
+    
+    # Remove oldest items
+    items_to_remove = len(_wav2vec2_cache) - _max_cache_size
+    for i in range(items_to_remove):
+        key, _ = sorted_items[i]
+        del _wav2vec2_cache[key]
+        
+        # Load cache at module initialization
+_load_cache()
+
+def _get_wav2vec2():
+    """
+    Lazy initialization of the Wav2Vec2 model and processor
+    """
+    global _wav2vec2_model, _wav2vec2_processor
+    
+    if _wav2vec2_model is None or _wav2vec2_processor is None:
+        # Initialize model - using facebook/wav2vec2-base
+        model_name = "facebook/wav2vec2-base"
+        print(f"Loading Wav2Vec2 model: {model_name}")
+        _wav2vec2_processor = Wav2Vec2Processor.from_pretrained(model_name)
+        _wav2vec2_model = Wav2Vec2Model.from_pretrained(model_name)
+        
+        # Set model to evaluation mode
+        _wav2vec2_model.eval()
+        
+        # Enable gradient checkpointing if needed (fixes deprecation warning)
+        if hasattr(_wav2vec2_model, "gradient_checkpointing_enable"):
+            _wav2vec2_model.gradient_checkpointing_enable()
+    
+    return _wav2vec2_model, _wav2vec2_processor
+def extract_features(audio_path, sr=16000, n_mfcc=40, use_wav2vec2=True):
+    """
+    Extract audio features from an audio file using Wav2Vec2 and traditional features
+    
+    Args:
+        audio_path: Path to the audio file
+        sr: Sample rate (default: 16000 - Wav2Vec2 expected sample rate)
+        n_mfcc: Number of MFCC features to extract (default: 40)
+        use_wav2vec2: Whether to use Wav2Vec2 features (default: True)
+        
+    Returns:
+        numpy.ndarray: Extracted features
+    """
+    try:
+        # Load the audio file
+        y, orig_sr = librosa.load(audio_path, sr=None)
+        
+        # For Wav2Vec2, we need to resample to 16kHz
+        if orig_sr != 16000:
+            y_16k = librosa.resample(y, orig_sr=orig_sr, target_sr=16000)
+        else:
+            y_16k = y
