@@ -82,3 +82,39 @@ def load_weights():
     complexity = min(1.0, max(0.0, complexity))
     
     return complexity
+def adjust_weights(audio, sr):
+    """
+    Dynamically adjust feature weights based on audio characteristics
+    
+    Args:
+        audio: Audio waveform
+        sr: Sample rate
+    
+    Returns:
+        dict: Updated feature weights
+    """
+    complexity = calculate_audio_complexity(audio, sr)
+    
+    # Adjust weights based on complexity:
+    # - More complex audio (noisy, varied): emphasize traditional features
+    # - Clean, speech-like audio: emphasize Wav2Vec2
+    if complexity < 0.3:  # Clean audio
+        weights = {
+            'wav2vec2': 0.8,
+            'mfcc': 0.15,
+            'spectral': 0.05
+        }
+    elif complexity < 0.6:  # Moderate complexity
+        weights = {
+            'wav2vec2': 0.6,
+            'mfcc': 0.25,
+            'spectral': 0.15
+        }
+    else:  # High complexity (noisy)
+        weights = {
+            'wav2vec2': 0.4,
+            'mfcc': 0.35,
+            'spectral': 0.25
+        }
+    
+    return weights
