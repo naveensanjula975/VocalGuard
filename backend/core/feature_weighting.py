@@ -135,3 +135,20 @@ def get_weights(audio=None, sr=None):
     else:
         # Return global weights
         return _feature_weights
+    def update_weights(new_weights):
+    """
+    Update global feature weights based on performance feedback
+    
+    Args:
+        new_weights: Dictionary of new weights
+    """
+    global _feature_weights
+    
+    # Validate weights
+    total = sum(new_weights.values())
+    if total > 0:
+        # Normalize weights
+        _feature_weights = {k: v/total for k, v in new_weights.items()}
+        save_weights()
+    else:
+        print("Invalid weights: sum must be greater than 0")
