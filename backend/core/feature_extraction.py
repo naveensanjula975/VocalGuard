@@ -109,3 +109,28 @@ def _trim_cache():
     for i in range(items_to_remove):
         key, _ = sorted_items[i]
         del _wav2vec2_cache[key]
+        
+        # Load cache at module initialization
+_load_cache()
+
+def _get_wav2vec2():
+    """
+    Lazy initialization of the Wav2Vec2 model and processor
+    """
+    global _wav2vec2_model, _wav2vec2_processor
+    
+    if _wav2vec2_model is None or _wav2vec2_processor is None:
+        # Initialize model - using facebook/wav2vec2-base
+        model_name = "facebook/wav2vec2-base"
+        print(f"Loading Wav2Vec2 model: {model_name}")
+        _wav2vec2_processor = Wav2Vec2Processor.from_pretrained(model_name)
+        _wav2vec2_model = Wav2Vec2Model.from_pretrained(model_name)
+        
+        # Set model to evaluation mode
+        _wav2vec2_model.eval()
+        
+        # Enable gradient checkpointing if needed (fixes deprecation warning)
+        if hasattr(_wav2vec2_model, "gradient_checkpointing_enable"):
+            _wav2vec2_model.gradient_checkpointing_enable()
+    
+    return _wav2vec2_model, _wav2vec2_processor
