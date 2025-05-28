@@ -134,3 +134,25 @@ def _get_wav2vec2():
             _wav2vec2_model.gradient_checkpointing_enable()
     
     return _wav2vec2_model, _wav2vec2_processor
+def extract_features(audio_path, sr=16000, n_mfcc=40, use_wav2vec2=True):
+    """
+    Extract audio features from an audio file using Wav2Vec2 and traditional features
+    
+    Args:
+        audio_path: Path to the audio file
+        sr: Sample rate (default: 16000 - Wav2Vec2 expected sample rate)
+        n_mfcc: Number of MFCC features to extract (default: 40)
+        use_wav2vec2: Whether to use Wav2Vec2 features (default: True)
+        
+    Returns:
+        numpy.ndarray: Extracted features
+    """
+    try:
+        # Load the audio file
+        y, orig_sr = librosa.load(audio_path, sr=None)
+        
+        # For Wav2Vec2, we need to resample to 16kHz
+        if orig_sr != 16000:
+            y_16k = librosa.resample(y, orig_sr=orig_sr, target_sr=16000)
+        else:
+            y_16k = y
