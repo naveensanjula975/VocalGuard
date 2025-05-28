@@ -45,3 +45,67 @@ def _get_audio_hash(audio_path):
         print(f"Error generating audio hash: {e}")
         # Fallback to just the file path
         return hashlib.md5(audio_path.encode()).hexdigest()
+    
+    def _load_cache():
+        """Load embedding cache from disk"""
+    global _wav2vec2_cache
+    
+    if not os.path.exists(_cache_dir):
+        os.makedirs(_cache_dir, exist_ok=True)
+        
+    if os.path.exists(_cache_file):
+        try:
+            with open(_cache_file, 'r') as f:
+                cache_data = json.load(f)
+                
+            # Convert lists back to numpy arrays
+            for key, value in cache_data.items():
+                if 'embedding' in value:
+                    value['embedding'] = np.array(value['embedding'])
+            _wav2vec2_cache = cache_data
+        except Exception as e:
+            # Silent fail for cache loading issues
+            _wav2vec2_cache = {}
+    else:
+        _wav2vec2_cache = {}
+
+def _save_cache():
+    """Save embedding cache to disk"""
+    if not _wav2vec2_cache:
+        return
+        
+    if not os.path.exists(_cache_dir):
+        os.makedirs(_cache_dir, exist_ok=True)
+    
+    try:
+        # Convert numpy arrays to lists for JSON serialization
+        cache_data = {}
+        for key, value in _wav2vec2_cache.items():
+            cache_data[key] = {
+                'timestamp': value['timestamp'],
+                'filename': value['filename']
+            }
+            if 'embedding' in value:
+                cache_data[key]['embedding'] = value['embedding'].tolist()
+        
+        with open(_cache_file, 'w') as f:
+            json.dump(cache_data, f)
+    except Exception:
+        # Silent fail for cache saving issues
+        pass
+
+def _trim_cache():
+    """Trim the cache to the maximum size by removing oldest entries"""
+    global _wav2vec2_cache
+    
+    if len(_wav2vec2_cache) <= _max_cache_size:
+        return
+        
+    # Sort by timestamp (oldest first)
+    sorted_items = sorted(_wav2vec2_cache.items(), key=lambda x: x[1]['timestamp'])
+    
+    # Remove oldest items
+    items_to_remove = len(_wav2vec2_cache) - _max_cache_size
+    for i in range(items_to_remove):
+        key, _ = sorted_items[i]
+        del _wav2vec2_cache[key]
