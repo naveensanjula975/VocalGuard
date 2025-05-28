@@ -234,3 +234,41 @@ def extract_features(audio_path, sr=16000, n_mfcc=40, use_wav2vec2=True):
         if audio_hash and audio_hash in _wav2vec2_cache:
             print(f"Using cached Wav2Vec2 embedding for {audio_path}")
             return _wav2vec2_cache[audio_hash]['embedding']
+        
+         # Truncate or pad the waveform if necessary
+        if len(waveform) > max_length:
+            waveform = waveform[:max_length]
+        
+        # Convert to float32 tensor
+        waveform_tensor = torch.tensor(waveform).float()
+        
+        # Prepare input for Wav2Vec2
+        inputs = processor(waveform_tensor, sampling_rate=16000, return_tensors="pt", padding=True)
+        
+        # Extract features without gradient calculation
+        with torch.no_grad():
+            outputs = model(**inputs)
+            
+        # Get the hidden states from the last layer
+        hidden_states = outputs.last_hidden_state
+        
+        # Average across time dimension to get a fixed-size representation
+        wav2vec2_embeddings = torch.mean(hidden_states, dim=1).squeeze().numpy()
+        
+        # Cache the embedding
+        if audio_hash:
+            _wav2vec2_cache[audio_hash] = {
+                'timestamp': time.time(),
+                'filename': audio_path,
+                'embedding': wav2vec2_embeddings
+            }
+            _trim_cache()
+            _save_cache()
+        
+        return wav2vec2_embeddings
+        
+    except Exception as e:
+        print(f"Error extracting Wav2Vec2 features: {e}")
+        # Return zero vector with the typical Wav2Vec2 embedding size
+        return np.zeros(768)  # Default size of Wav2Vec2 embeddings
+    
