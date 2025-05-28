@@ -156,7 +156,7 @@ def extract_features(audio_path, sr=16000, n_mfcc=40, use_wav2vec2=True):
             y_16k = librosa.resample(y, orig_sr=orig_sr, target_sr=16000)
         else:
             y_16k = y
-              # Extract features using Wav2Vec2 if enabled
+               # Extract features using Wav2Vec2 if enabled
         if use_wav2vec2:
             wav2vec2_features = extract_wav2vec2_features(y_16k, audio_path)
             
