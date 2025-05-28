@@ -152,3 +152,5 @@ def get_weights(audio=None, sr=None):
         save_weights()
     else:
         print("Invalid weights: sum must be greater than 0")
+        # Load weights at module initialization
+load_weights()
