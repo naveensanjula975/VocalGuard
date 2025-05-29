@@ -26,6 +26,50 @@ const ResetPassword = () => {
       setCheckedToken(true);
     }
   }, []);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (password !== confirmPassword) {
+      setStatus({
+        type: "error",
+        message: "Passwords do not match!",
+      });
+      return;
+    }
+
+    if (!token) {
+      setStatus({
+        type: "error",
+        message: "Missing reset token.",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await axios.post("http://localhost:8000/reset-password", {
+        token,
+        new_password: password,
+      });
+
+      setStatus({
+        type: "success",
+        message: "✅ Password updated successfully! You can now log in.",
+      });
+      setPassword("");
+      setConfirmPassword("");
+    } catch (err) {
+      console.error("Reset error:", err);
+      setStatus({
+        type: "error",
+        message: "❌ Something went wrong. Please try again.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
  
  
   return (
@@ -76,6 +120,18 @@ const ResetPassword = () => {
               className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             />
           </div>
+
+          {checkedToken && status.message && (
+            <div
+              className={`p-4 rounded-lg text-sm ${
+                status.type === "success"
+                  ? "bg-green-50 text-green-800"
+                  : "bg-red-50 text-red-800"
+              }`}
+            >
+              {status.message}
+            </div>
+          )}
 
           <button
             type="submit"
