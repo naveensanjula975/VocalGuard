@@ -20,6 +20,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import ProfilePage from "./pages/ProfilePage";
 import Result from "./components/Result";
 import DetailedAnalysisPage from "./pages/DetailedAnalysisPage";
+import ResetPassword from "./pages/ResetPassword";
 
 const AppContent = () => {
   const location = useLocation();
@@ -56,6 +57,7 @@ const AppContent = () => {
           <Route path="/result" element={<ResaultPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/detailed-analysis" element={<DetailedAnalysisPage />} />
+          <Route path="/reset-password" element={<ResetPassword/>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
