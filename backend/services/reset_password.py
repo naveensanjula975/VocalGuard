@@ -36,3 +36,10 @@ def send_reset_email(email):
     except Exception as e:
         print("Email send error:", e)
         return False
+
+def reset_password(token, new_password):
+    if token not in reset_tokens:
+        return False
+    uid = reset_tokens.pop(token)
+    auth.update_user(uid, password=new_password)
+    return True   
