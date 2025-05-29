@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
+import axios from "axios";
 
 const ForgotPasswordPage = () => {
   const [email, setEmail] = useState("");
@@ -9,11 +10,14 @@ const ForgotPasswordPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
+    setStatus({ type: "", message: "" });
+
+
 
     try {
-      // TODO: Implement actual API call here
-      // Simulating API call for now
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+     const response = await axios.post("http://localhost:8000/forgot-password", {
+        email,
+      });
 
       setStatus({
         type: "success",
