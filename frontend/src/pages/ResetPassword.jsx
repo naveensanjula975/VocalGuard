@@ -121,17 +121,7 @@ const ResetPassword = () => {
             />
           </div>
 
-          {checkedToken && status.message && (
-            <div
-              className={`p-4 rounded-lg text-sm ${
-                status.type === "success"
-                  ? "bg-green-50 text-green-800"
-                  : "bg-red-50 text-red-800"
-              }`}
-            >
-              {status.message}
-            </div>
-          )}
+        
 
           <button
             type="submit"
