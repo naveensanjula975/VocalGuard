@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 
 # Import local modules
-from models.models import DeepFakeDetector
+from backend.models.base_models import DeepFakeDetector
 from core.preprocessing import load_audio, preprocess_audio, split_into_segments
 from core.feature_extraction import extract_mel_spectrogram
 from core.augmentation import random_augment

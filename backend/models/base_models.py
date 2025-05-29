@@ -27,3 +27,10 @@ class AudioDetectionRequest(BaseModel):
     user_id: Optional[str] = None
     store_results: bool = True
     threshold: float = 0.5
+    
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
