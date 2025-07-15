@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
+import { api } from "../services/api";
 
 const ForgotPasswordPage = () => {
   const [email, setEmail] = useState("");
@@ -11,9 +12,7 @@ const ForgotPasswordPage = () => {
     setIsLoading(true);
 
     try {
-      // TODO: Implement actual API call here
-      // Simulating API call for now
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      await api.sendPasswordResetLink(email);
 
       setStatus({
         type: "success",
@@ -22,7 +21,7 @@ const ForgotPasswordPage = () => {
     } catch (error) {
       setStatus({
         type: "error",
-        message: "Failed to send reset link. Please try again.",
+        message: error.message || "Failed to send reset link. Please try again.",
       });
     } finally {
       setIsLoading(false);
