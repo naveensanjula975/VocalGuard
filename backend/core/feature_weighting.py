@@ -17,12 +17,14 @@ DEFAULT_WEIGHTS = {
     'mfcc': 0.2,
     'spectral': 0.1
 }
+
 # Cache directory
 _cache_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "cache")
 _weights_file = os.path.join(_cache_dir, "feature_weights.json")
 
 # Global weights
 _feature_weights = DEFAULT_WEIGHTS.copy()
+
 def load_weights():
     """Load feature weights from disk"""
     global _feature_weights
@@ -40,7 +42,8 @@ def load_weights():
     else:
         _feature_weights = DEFAULT_WEIGHTS.copy()
         save_weights()
-        def save_weights():
+
+def save_weights():
     """Save feature weights to disk"""
     if not os.path.exists(_cache_dir):
         os.makedirs(_cache_dir, exist_ok=True)
@@ -50,7 +53,8 @@ def load_weights():
     except Exception:
         # Silently continue if weights can't be saved
         pass
-    def calculate_audio_complexity(audio, sr):
+
+def calculate_audio_complexity(audio, sr):
     """
     Calculate audio complexity metrics to determine optimal feature weighting
     
@@ -82,6 +86,7 @@ def load_weights():
     complexity = min(1.0, max(0.0, complexity))
     
     return complexity
+
 def adjust_weights(audio, sr):
     """
     Dynamically adjust feature weights based on audio characteristics
@@ -118,6 +123,7 @@ def adjust_weights(audio, sr):
         }
     
     return weights
+
 def get_weights(audio=None, sr=None):
     """
     Get current feature weights, optionally adjusting for specific audio
@@ -135,7 +141,8 @@ def get_weights(audio=None, sr=None):
     else:
         # Return global weights
         return _feature_weights
-    def update_weights(new_weights):
+
+def update_weights(new_weights):
     """
     Update global feature weights based on performance feedback
     
@@ -152,5 +159,6 @@ def get_weights(audio=None, sr=None):
         save_weights()
     else:
         print("Invalid weights: sum must be greater than 0")
-        # Load weights at module initialization
+
+# Load weights at module initialization
 load_weights()

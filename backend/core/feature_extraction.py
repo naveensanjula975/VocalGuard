@@ -8,6 +8,7 @@ import hashlib
 import time
 import json
 from pathlib import Path
+
 # Initialize Wav2Vec2 model and processor (lazy loading)
 _wav2vec2_model = None
 _wav2vec2_processor = None
@@ -45,9 +46,9 @@ def _get_audio_hash(audio_path):
         print(f"Error generating audio hash: {e}")
         # Fallback to just the file path
         return hashlib.md5(audio_path.encode()).hexdigest()
-    
-    def _load_cache():
-        """Load embedding cache from disk"""
+
+def _load_cache():
+    """Load embedding cache from disk"""
     global _wav2vec2_cache
     
     if not os.path.exists(_cache_dir):
@@ -109,8 +110,8 @@ def _trim_cache():
     for i in range(items_to_remove):
         key, _ = sorted_items[i]
         del _wav2vec2_cache[key]
-        
-        # Load cache at module initialization
+
+# Load cache at module initialization
 _load_cache()
 
 def _get_wav2vec2():
@@ -134,6 +135,7 @@ def _get_wav2vec2():
             _wav2vec2_model.gradient_checkpointing_enable()
     
     return _wav2vec2_model, _wav2vec2_processor
+
 def extract_features(audio_path, sr=16000, n_mfcc=40, use_wav2vec2=True):
     """
     Extract audio features from an audio file using Wav2Vec2 and traditional features
@@ -156,7 +158,8 @@ def extract_features(audio_path, sr=16000, n_mfcc=40, use_wav2vec2=True):
             y_16k = librosa.resample(y, orig_sr=orig_sr, target_sr=16000)
         else:
             y_16k = y
-               # Extract features using Wav2Vec2 if enabled
+            
+        # Extract features using Wav2Vec2 if enabled
         if use_wav2vec2:
             wav2vec2_features = extract_wav2vec2_features(y_16k, audio_path)
             
@@ -179,8 +182,8 @@ def extract_features(audio_path, sr=16000, n_mfcc=40, use_wav2vec2=True):
             combined_features = np.concatenate((wav2vec2_features, traditional_features))
             
             return combined_features
-         else:
-                # Fall back to traditional feature extraction
+        else:
+            # Fall back to traditional feature extraction
             # Extract MFCCs
             mfccs = librosa.feature.mfcc(y=y, sr=orig_sr, n_mfcc=n_mfcc)
             
@@ -204,8 +207,9 @@ def extract_features(audio_path, sr=16000, n_mfcc=40, use_wav2vec2=True):
         # Return a zero vector as fallback - adjusted for potential Wav2Vec2 features
         fallback_size = 768 + n_mfcc * 2 + 3 if use_wav2vec2 else n_mfcc * 2 + 3
         return np.zeros(fallback_size)
-    def extract_wav2vec2_features(waveform_or_path, audio_path=None, max_length=160000):
-        """
+
+def extract_wav2vec2_features(waveform_or_path, audio_path=None, max_length=160000):
+    """
     Extract features using the Wav2Vec2 model
     
     Args:
@@ -235,7 +239,7 @@ def extract_features(audio_path, sr=16000, n_mfcc=40, use_wav2vec2=True):
             print(f"Using cached Wav2Vec2 embedding for {audio_path}")
             return _wav2vec2_cache[audio_hash]['embedding']
         
-         # Truncate or pad the waveform if necessary
+        # Truncate or pad the waveform if necessary
         if len(waveform) > max_length:
             waveform = waveform[:max_length]
         
@@ -271,4 +275,3 @@ def extract_features(audio_path, sr=16000, n_mfcc=40, use_wav2vec2=True):
         print(f"Error extracting Wav2Vec2 features: {e}")
         # Return zero vector with the typical Wav2Vec2 embedding size
         return np.zeros(768)  # Default size of Wav2Vec2 embeddings
-    
