@@ -1,17 +1,25 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 
 const LoginForm = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, authError, setAuthError } = useAuth();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  
+  // When component mounts, clear any auth errors
+  useEffect(() => {
+    if (authError) {
+      setError(authError);
+      setAuthError(null);
+    }
+  }, [authError, setAuthError]);
 
   const getErrorMessage = (errorCode) => {
     switch (errorCode) {
@@ -26,9 +34,7 @@ const LoginForm = () => {
       default:
         return "Invalid email or password";
     }
-  };
-
-  const handleSubmit = async (e) => {
+  };  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
