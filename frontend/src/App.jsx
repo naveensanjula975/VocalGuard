@@ -54,8 +54,14 @@ const AppContent = () => {
           />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/result" element={<ResaultPage />} />
+          <Route path="/result/:id" element={<ResaultPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/detailed-analysis" element={<DetailedAnalysisPage />} />
+          <Route
+            path="/detailed-analysis/:id"
+            element={<DetailedAnalysisPage />}
+          />
+          <Route path="/analysis/:id" element={<DetailedAnalysisPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
