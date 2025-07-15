@@ -20,8 +20,8 @@ def initialize_firebase():
             # Try multiple locations for serviceAccountKey.json
             base_path = Path(os.path.dirname(os.path.dirname(__file__)))
             possible_paths = [
-                base_path / "config" / "serviceAccountKey.json", 
-                base_path / "serviceAccountKey.json",        
+                base_path / "config" / "serviceAccountKey.json",  # /backend/config/serviceAccountKey.json
+                base_path / "serviceAccountKey.json",            # /backend/serviceAccountKey.json
             ]
             service_account_path = None
             for path in possible_paths:
