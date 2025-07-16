@@ -108,8 +108,33 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem("username");
     localStorage.removeItem("email");
   };
+
+  const updateUser = async (userData) => {
+    try {
+      // Here you would typically make an API call to update user data
+      // For now, we'll just update the local storage and state
+      if (userData.username) {
+        localStorage.setItem("username", userData.username);
+      }
+      if (userData.email) {
+        localStorage.setItem("email", userData.email);
+      }
+
+      // Update the user state
+      setUser(prevUser => ({
+        ...prevUser,
+        username: userData.username || prevUser.username,
+        email: userData.email || prevUser.email,
+      }));
+
+      return Promise.resolve();
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading, authError, setAuthError }}>
+    <AuthContext.Provider value={{ user, login, logout, updateUser, loading, authError, setAuthError }}>
       {children}
     </AuthContext.Provider>
   );
