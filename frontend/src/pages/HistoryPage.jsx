@@ -11,6 +11,7 @@ const HistoryPage = () => {
   const [selectedItems, setSelectedItems] = useState([]);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [sortDirection, setSortDirection] = useState("desc"); // "asc" or "desc"
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -20,23 +21,41 @@ const HistoryPage = () => {
       return [];
     }
 
+    console.log("Formatting analysis data:", analyses);
+
     return analyses
       .map((analysis) => {
         if (!analysis) return null;
 
-        const metadata = analysis.metadata || {};
+        // Debug: Log each analysis structure
+        console.log("Processing analysis:", analysis);
+
+        // The metadata is merged with analysis data at the top level
+        // No need to access analysis.metadata, data is directly in analysis
 
         // Extract and format the timestamp
-        const uploadDate = analysis.analysis_timestamp
-          ? new Date(analysis.analysis_timestamp)
-          : new Date();
+        let uploadDate;
+        try {
+          uploadDate = analysis.analysis_timestamp
+            ? new Date(analysis.analysis_timestamp)
+            : new Date();
+          
+          // Check if date is valid
+          if (isNaN(uploadDate.getTime())) {
+            uploadDate = new Date(); // fallback to current date
+          }
+        } catch (e) {
+          uploadDate = new Date(); // fallback to current date
+        }
 
         const formattedDate = uploadDate.toLocaleDateString("en-US", {
           year: "numeric",
           month: "short",
           day: "numeric",
+        }) + ", " + uploadDate.toLocaleTimeString("en-US", {
           hour: "2-digit",
           minute: "2-digit",
+          hour12: true,
         }); // Format the result string
         let confidence = 0;
         try {
@@ -128,21 +147,26 @@ const HistoryPage = () => {
 
         let isAI = analysis.is_deepfake;
 
+        // Debug: Log the filename extraction
+        console.log("Filename from analysis:", analysis.filename);
+        console.log("Duration from analysis:", analysis.duration);
+        console.log("Sample rate from analysis:", analysis.sample_rate);
+
         return {
           id: analysis.id,
           date: formattedDate,
-          fileName: metadata.filename || "Unknown File",
+          fileName: analysis.filename || "Unknown File", // Direct access to filename
           result: resultText,
           isAI: isAI,
           confidence: Math.round(confidence * 100),
-          duration: metadata.duration
-            ? `${parseFloat(metadata.duration).toFixed(2)}s`
+          duration: analysis.duration
+            ? `${parseFloat(analysis.duration).toFixed(2)}s`
             : "Unknown",
-          format: metadata.filename
-            ? metadata.filename.split(".").pop().toUpperCase()
+          format: analysis.filename
+            ? analysis.filename.split(".").pop().toUpperCase()
             : "Unknown",
-          sampleRate: metadata.sample_rate
-            ? `${(parseFloat(metadata.sample_rate) / 1000).toFixed(1)} kHz`
+          sampleRate: analysis.sample_rate
+            ? `${(parseFloat(analysis.sample_rate) / 1000).toFixed(1)} kHz`
             : "Unknown",
           analysisTime:
             processingTime !== null
@@ -150,9 +174,17 @@ const HistoryPage = () => {
               : "Unknown",
           details: detailsArray,
           rawData: analysis, // Keep the raw data for reference
+          timestamp: uploadDate, // Store the actual date object for sorting
         };
       })
-      .filter(Boolean); // Remove any null entries
+      .filter(Boolean) // Remove any null entries
+      .sort((a, b) => {
+        // Sort by timestamp in descending order (newest first)
+        // Handle cases where timestamp might be undefined or null
+        const timeA = a.timestamp ? a.timestamp.getTime() : 0;
+        const timeB = b.timestamp ? b.timestamp.getTime() : 0;
+        return timeB - timeA;
+      });
   };
 
   useEffect(() => {
@@ -168,6 +200,11 @@ const HistoryPage = () => {
         const response = await api.getUserAnalyses(user.token);
 
         if (response.analyses && Array.isArray(response.analyses)) {
+          // Debug: Log the first analysis to see the structure
+          if (response.analyses.length > 0) {
+            console.log("Sample analysis structure:", response.analyses[0]);
+          }
+          
           // Transform API data to match our component's expected format
           const formattedData = formatAnalysisData(response.analyses);
           setHistoryData(formattedData);
@@ -244,6 +281,27 @@ const HistoryPage = () => {
     } else {
       navigate("/detailed-analysis", { state: { analysisData: item } });
     }
+  };
+
+  // Function to toggle date sorting
+  const toggleDateSort = () => {
+    const newDirection = sortDirection === "desc" ? "asc" : "desc";
+    setSortDirection(newDirection);
+    
+    setHistoryData(prev => {
+      const sorted = [...prev].sort((a, b) => {
+        // Handle cases where timestamp might be undefined or null
+        const timeA = a.timestamp ? a.timestamp.getTime() : 0;
+        const timeB = b.timestamp ? b.timestamp.getTime() : 0;
+        
+        if (newDirection === "desc") {
+          return timeB - timeA;
+        } else {
+          return timeA - timeB;
+        }
+      });
+      return sorted;
+    });
   };
 
   // Filter history based on search term
@@ -394,8 +452,26 @@ const HistoryPage = () => {
                         className="rounded text-purple-600 focus:ring-purple-500"
                       />
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Date
+                    <th 
+                      className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                      onClick={toggleDateSort}
+                    >
+                      <div className="flex items-center space-x-1">
+                        <span>Date</span>
+                        <svg 
+                          className={`w-4 h-4 transition-transform ${sortDirection === "desc" ? "rotate-180" : ""}`}
+                          fill="none" 
+                          stroke="currentColor" 
+                          viewBox="0 0 24 24"
+                        >
+                          <path 
+                            strokeLinecap="round" 
+                            strokeLinejoin="round" 
+                            strokeWidth="2" 
+                            d="M19 9l-7 7-7-7"
+                          />
+                        </svg>
+                      </div>
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Filename
