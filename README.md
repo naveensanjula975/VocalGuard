@@ -1,4 +1,4 @@
-#<h1 align="center">VocalGuard - Audio Deepfake Detection System</h1> 
+# <h1 align="center">VocalGuard - Audio Deepfake Detection System</h1> 
 
 <p align="center">
   <img src="frontend/src/assets/logo.png" alt="VocalGuard Logo" width="200"/>
