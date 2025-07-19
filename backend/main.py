@@ -109,7 +109,7 @@ async def detect_deepfake_endpoint(
         filename = file.filename
         file_size = len(contents)
           # Process the file with our deepfake detection logic and store results
-        result = detect_deepfake(temp_file.name, user_id=user_id, store_results=True, filename=filename)
+        result = detect_deepfake(temp_file.name, user_id=user_id, store_results=True, filename=filename, analysis_type="standard")
         
         # Ensure filename is in the result
         result["filename"] = filename
@@ -122,9 +122,15 @@ async def detect_deepfake_endpoint(
             content={"error": f"Failed to process audio: {str(e)}"}
         )
     finally:
-        # Clean up the temporary file
-        temp_file.close()
-        os.unlink(temp_file.name)
+        # Clean up the temporary file safely
+        try:
+            if not temp_file.closed:
+                temp_file.close()
+            if os.path.exists(temp_file.name):
+                os.unlink(temp_file.name)
+        except (OSError, FileNotFoundError):
+            # File already deleted or doesn't exist
+            pass
         
 @app.post("/detect-deepfake-advanced/")
 async def detect_deepfake_advanced_endpoint(
@@ -146,10 +152,10 @@ async def detect_deepfake_advanced_endpoint(
         filename = file.filename
         file_size = len(contents)
           # Process the file with our deepfake detection logic with Wav2Vec2 and store results
-        result = detect_deepfake(temp_file.name, user_id=user_id, store_results=True, filename=filename)
+        result = detect_deepfake(temp_file.name, user_id=user_id, store_results=True, filename=filename, analysis_type="advanced")
           # Add filename and model info to result
         result["filename"] = filename
-        result["model_used"] = "wav2vec2"
+        result["model_used"] = result.get("model_used", "wav2vec2-xlsr-deepfake")
         
         return result
     except Exception as e:
@@ -159,11 +165,15 @@ async def detect_deepfake_advanced_endpoint(
             content={"error": f"Failed to process audio with Wav2Vec2: {str(e)}"}
         )
     finally:
-        # Clean up the temporary file
-        temp_file.close()
-        os.unlink(temp_file.name)
-        temp_file.close()
-        os.unlink(temp_file.name)
+        # Clean up the temporary file safely
+        try:
+            if not temp_file.closed:
+                temp_file.close()
+            if os.path.exists(temp_file.name):
+                os.unlink(temp_file.name)
+        except (OSError, FileNotFoundError):
+            # File already deleted or doesn't exist
+            pass
 
 @app.post("/signup")
 async def signup(user_data: UserSignUp):
@@ -335,7 +345,7 @@ async def detect_deepfake_demo(file: UploadFile = File(...)):
             f.write(contents)
             
         # Process the file with our deepfake detection logic without storing results
-        result = detect_deepfake(temp_file.name, store_results=False)
+        result = detect_deepfake(temp_file.name, store_results=False, analysis_type="demo")
         return result
     except Exception as e:
         return JSONResponse(
@@ -343,9 +353,15 @@ async def detect_deepfake_demo(file: UploadFile = File(...)):
             content={"error": f"Failed to process audio: {str(e)}"}
         )
     finally:
-        # Clean up the temporary file
-        temp_file.close()
-        os.unlink(temp_file.name)
+        # Clean up the temporary file safely
+        try:
+            if not temp_file.closed:
+                temp_file.close()
+            if os.path.exists(temp_file.name):
+                os.unlink(temp_file.name)
+        except (OSError, FileNotFoundError):
+            # File already deleted or doesn't exist
+            pass
 
 @app.post("/analyses/delete")
 async def delete_analyses(
@@ -409,9 +425,15 @@ async def detect_deepfake_transformer_endpoint(
             content={"error": f"Failed to process audio with Transformer ensemble: {str(e)}"}
         )
     finally:
-        # Clean up the temporary file
-        temp_file.close()
-        os.unlink(temp_file.name)
+        # Clean up the temporary file safely
+        try:
+            if not temp_file.closed:
+                temp_file.close()
+            if os.path.exists(temp_file.name):
+                os.unlink(temp_file.name)
+        except (OSError, FileNotFoundError):
+            # File already deleted or doesn't exist
+            pass
 
 @app.post("/detect-deepfake-attention-analysis/")
 async def detect_deepfake_attention_analysis_endpoint(
@@ -461,9 +483,15 @@ async def detect_deepfake_attention_analysis_endpoint(
             content={"error": f"Failed to process attention analysis: {str(e)}"}
         )
     finally:
-        # Clean up the temporary file
-        temp_file.close()
-        os.unlink(temp_file.name)
+        # Clean up the temporary file safely
+        try:
+            if not temp_file.closed:
+                temp_file.close()
+            if os.path.exists(temp_file.name):
+                os.unlink(temp_file.name)
+        except (OSError, FileNotFoundError):
+            # File already deleted or doesn't exist
+            pass
 
 if __name__ == "__main__":
     import uvicorn

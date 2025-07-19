@@ -139,7 +139,7 @@ def load_model(model_path=None):
     model.eval()
     return model
 
-def detect_deepfake(audio_path, user_id=None, store_results=True, filename=None):
+def detect_deepfake(audio_path, user_id=None, store_results=True, filename=None, analysis_type="advanced"):
     """
     Detect if an audio file is a deepfake using the Wav2Vec2 model in /models/deepfake_audio_model/.
     
@@ -148,6 +148,7 @@ def detect_deepfake(audio_path, user_id=None, store_results=True, filename=None)
         user_id: Optional user ID to associate with the analysis
         store_results: Whether to store results in Firebase database
         filename: Original filename of the uploaded audio
+        analysis_type: Type of analysis ("standard" or "advanced")
         
     Returns:
         dict: Results including probability of being fake, classification, and analysis IDs
@@ -162,12 +163,18 @@ def detect_deepfake(audio_path, user_id=None, store_results=True, filename=None)
         
         # Convert the detailed result to our API format
         processing_time = (time.time() - start_time) * 1000  # ms
+        # Determine model name based on analysis type
+        model_name = ("wav2vec2-xlsr-deepfake" if analysis_type == "advanced" else 
+                     "standard-ml-classifier" if analysis_type == "standard" else
+                     "wav2vec2-demo" if analysis_type == "demo" else
+                     "unknown-model")
+        
         result = {
             "probability": detection_result["confidence"],
             "is_fake": detection_result["is_fake"],
             "confidence": detection_result["confidence"],
             "label": detection_result["prediction"],
-            "model_used": "wav2vec2-xlsr-deepfake",
+            "model_used": model_name,
             "processing_time": processing_time,
             "probabilities": detection_result["probabilities"],
             "filename": filename or os.path.basename(audio_path)
@@ -237,6 +244,11 @@ def detect_deepfake(audio_path, user_id=None, store_results=True, filename=None)
         return result
     except Exception as e:
         print(f"Error in detect_deepfake: {str(e)}")
+        model_name = ("wav2vec2-xlsr-deepfake" if analysis_type == "advanced" else 
+                     "standard-ml-classifier" if analysis_type == "standard" else
+                     "wav2vec2-demo" if analysis_type == "demo" else
+                     "unknown-model")
+        
         print(traceback.format_exc())
         return {
             "error": str(e),
@@ -244,7 +256,7 @@ def detect_deepfake(audio_path, user_id=None, store_results=True, filename=None)
             "is_fake": None,
             "confidence": 0.0,
             "label": "error",
-            "model_used": "wav2vec2-xlsr-deepfake",
+            "model_used": model_name,
             "processing_time": 0,
             "filename": filename or (os.path.basename(audio_path) if audio_path else "unknown")
         }

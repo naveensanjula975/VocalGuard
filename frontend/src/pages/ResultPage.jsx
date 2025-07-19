@@ -57,7 +57,12 @@ export default function ResultPage() {
             analysis_id: data.id,
             details_id: data.details?.id,
             analysisTime: data.details?.processing_time || "Unknown",
-            modelUsed: data.model_used === "wav2vec2" ? "Wav2Vec2 (Advanced)" : "Standard",
+            modelUsed: data.model_used === "wav2vec2-xlsr-deepfake" ? "Wav2Vec2 (Advanced)" : 
+                       data.model_used === "standard-ml-classifier" ? "Standard ML" :
+                       data.model_used === "wav2vec2-demo" ? "Demo Version" :
+                       data.model_used === "wav2vec2_transformer_ensemble" ? "Transformer Ensemble" :
+                       data.model_used === "transformer_attention_analysis" ? "Attention Analysis" :
+                       "Unknown Model",
             details: [],
           };
           // Add details if available
