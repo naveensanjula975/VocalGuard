@@ -90,11 +90,19 @@ const Result = ({ result: propResult }) => {
       tempContainer.style.padding = "20px";
       tempContainer.style.backgroundColor = "#ffffff";
 
-      // Clone the content without share buttons
+      // Clone the content and remove interactive elements
       const content = element.cloneNode(true);
+      
+      // Remove share section
       const shareSection = content.querySelector(".react-share__ShareButton");
       if (shareSection) {
         shareSection.remove();
+      }
+      
+      // Remove action buttons section
+      const actionButtons = content.querySelector(".pdf-exclude-buttons");
+      if (actionButtons) {
+        actionButtons.remove();
       }
 
       tempContainer.appendChild(content);
@@ -104,11 +112,14 @@ const Result = ({ result: propResult }) => {
       const dataUrl = await domtoimage.toPng(tempContainer, {
         quality: 1.0,
         bgcolor: "#ffffff",
+        width: 800,
+        height: tempContainer.scrollHeight,
         style: {
           transform: "scale(1)",
           "transform-origin": "top left",
           width: "800px",
           height: "auto",
+          fontFamily: "system-ui, -apple-system, sans-serif",
         },
       });
 
@@ -125,12 +136,21 @@ const Result = ({ result: propResult }) => {
         floatPrecision: 16,
       });
 
-      // Calculate dimensions to fit on one page
-      const imgWidth = 190; // Slightly less than A4 width to account for margins
-      const imgHeight = (tempContainer.offsetHeight * imgWidth) / 800; // Maintain aspect ratio
+      // Calculate dimensions to fit properly on the page
+      const pageWidth = 210; // A4 width in mm
+      const pageHeight = 297; // A4 height in mm
+      const margin = 10;
+      const imgWidth = pageWidth - (2 * margin);
+      const imgHeight = (tempContainer.scrollHeight * imgWidth) / 800;
+
+      // Check if content fits on one page, if not, adjust
+      let finalHeight = imgHeight;
+      if (imgHeight > pageHeight - (2 * margin)) {
+        finalHeight = pageHeight - (2 * margin);
+      }
 
       // Add the image to the PDF
-      pdf.addImage(dataUrl, "PNG", 10, 10, imgWidth, imgHeight);
+      pdf.addImage(dataUrl, "PNG", margin, margin, imgWidth, finalHeight);
 
       // Add metadata
       pdf.setProperties({
@@ -165,7 +185,7 @@ const Result = ({ result: propResult }) => {
           {/* Header with Logo */}
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-2xl font-bold text-gray-900 whitespace-nowrap">
                 VocalGuard Analysis Report
               </h1>
               <p className="text-sm text-gray-500">
@@ -349,7 +369,7 @@ const Result = ({ result: propResult }) => {
                 </div>
               </div>
             </div>            {/* Action Buttons */}
-            <div className="flex flex-wrap justify-end gap-3 mt-6">
+            <div className="flex flex-wrap justify-end gap-3 mt-6 pdf-exclude-buttons">
               {result.analysis_id && (
                 <button
                   onClick={() => navigate(`/analysis/${result.analysis_id}`)}
@@ -427,9 +447,9 @@ const Result = ({ result: propResult }) => {
                 <FacebookShareButton url={shareUrl} quote={shareTitle} className="transition-transform hover:scale-110">
                   <FacebookIcon size={40} round />
                 </FacebookShareButton>
-                <TwitterShareButton url={shareUrl} title={shareTitle} className="transition-transform hover:scale-110">
+                {/* <TwitterShareButton url={shareUrl} title={shareTitle} className="transition-transform hover:scale-110">
                   <TwitterIcon size={40} round />
-                </TwitterShareButton>
+                </TwitterShareButton> */}
                 <WhatsappShareButton url={shareUrl} title={shareTitle} className="transition-transform hover:scale-110">
                   <WhatsappIcon size={40} round />
                 </WhatsappShareButton>

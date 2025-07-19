@@ -22,7 +22,7 @@ from services.database_service import DatabaseService
 from firebase_admin import auth, firestore
 
 # Import deepfake detection functionality
-from core.detect_deepfake import detect_deepfake
+from core.detect_deepfake import detect_deepfake, detect_deepfake_ensemble
 
 # Import data models
 from models.models import (
@@ -272,6 +272,20 @@ async def get_user_analyses(token_data=Depends(verify_token)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to retrieve analyses: {str(e)}")
 
+@app.get("/data/analyses")
+async def get_data_analyses(token_data=Depends(verify_token)):
+    """
+    Get all analyses for the currently authenticated user (alternative endpoint)
+    """
+    user_id = token_data["uid"]
+    
+    try:
+        db_service = DatabaseService()
+        analyses = db_service.get_user_analyses(user_id)
+        return {"analyses": analyses}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve analyses: {str(e)}")
+
 @app.get("/analyses/{analysis_id}")
 async def get_analysis_by_id(analysis_id: str, token_data=Depends(verify_token)):
     """
@@ -353,6 +367,103 @@ async def delete_analyses(
         return {"deleted": results}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete analyses: {str(e)}")
+
+@app.post("/detect-deepfake-transformer/")
+async def detect_deepfake_transformer_endpoint(
+    file: UploadFile = File(...),
+    token_data: dict = Depends(verify_token)
+):
+    """
+    Transformer ensemble endpoint using both Wav2Vec2 and attention-based Transformer models
+    """
+    user_id = token_data["uid"]
+    
+    # Save the uploaded file to a temporary location
+    temp_file = tempfile.NamedTemporaryFile(delete=False)
+    try:
+        contents = await file.read()
+        with open(temp_file.name, 'wb') as f:
+            f.write(contents)
+        
+        filename = file.filename
+        file_size = len(contents)
+        
+        # Process the file with ensemble detection (Wav2Vec2 + Transformer)
+        result = detect_deepfake_ensemble(
+            temp_file.name, 
+            user_id=user_id, 
+            store_results=True, 
+            filename=filename,
+            use_transformer=True
+        )
+        
+        # Add filename and model info to result
+        result["filename"] = filename
+        result["model_used"] = result.get("model_used", "wav2vec2_transformer_ensemble")
+        
+        return result
+    except Exception as e:
+        print(f"Error processing audio with Transformer ensemble: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"Failed to process audio with Transformer ensemble: {str(e)}"}
+        )
+    finally:
+        # Clean up the temporary file
+        temp_file.close()
+        os.unlink(temp_file.name)
+
+@app.post("/detect-deepfake-attention-analysis/")
+async def detect_deepfake_attention_analysis_endpoint(
+    file: UploadFile = File(...),
+    token_data: dict = Depends(verify_token)
+):
+    """
+    Get detailed attention analysis for deepfake detection visualization
+    """
+    user_id = token_data["uid"]
+    
+    # Save the uploaded file to a temporary location
+    temp_file = tempfile.NamedTemporaryFile(delete=False)
+    try:
+        contents = await file.read()
+        with open(temp_file.name, 'wb') as f:
+            f.write(contents)
+        
+        filename = file.filename
+        
+        # Get ensemble results with detailed attention analysis
+        result = detect_deepfake_ensemble(
+            temp_file.name, 
+            user_id=user_id, 
+            store_results=False,  # Don't store for analysis-only requests
+            filename=filename,
+            use_transformer=True
+        )
+        
+        # Extract attention analysis for visualization
+        attention_analysis = result.get("detailed_results", {}).get("attention_analysis", {})
+        
+        response = {
+            "filename": filename,
+            "prediction": result.get("prediction", "error"),
+            "confidence": result.get("confidence", 0.0),
+            "is_fake": result.get("is_fake", None),
+            "attention_analysis": attention_analysis,
+            "model_used": "transformer_attention_analysis"
+        }
+        
+        return response
+    except Exception as e:
+        print(f"Error processing attention analysis: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"Failed to process attention analysis: {str(e)}"}
+        )
+    finally:
+        # Clean up the temporary file
+        temp_file.close()
+        os.unlink(temp_file.name)
 
 if __name__ == "__main__":
     import uvicorn

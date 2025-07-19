@@ -129,7 +129,7 @@ export const api = {
 
     getUserAnalyses: async (token) => {
         try {
-            const response = await fetch(`${API_BASE_URL}/user/analyses`, {
+            const response = await fetch(`${API_BASE_URL}/data/analyses`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${token}`,

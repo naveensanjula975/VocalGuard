@@ -1,5 +1,6 @@
 import firebase_admin
 from firebase_admin import firestore
+from google.cloud.firestore_v1.base_query import FieldFilter
 import uuid
 import json
 import datetime
@@ -128,7 +129,7 @@ class DatabaseService:
             List of analysis records
         """
         # First get metadata records for the user
-        metadata_query = self.db.collection('audio_metadata').where('user_id', '==', user_id).stream()
+        metadata_query = self.db.collection('audio_metadata').where(filter=FieldFilter('user_id', '==', user_id)).stream()
         
         if not metadata_query:
             return []
@@ -141,7 +142,7 @@ class DatabaseService:
             metadata_id = metadata_doc.id
             
             # Query for analyses with this metadata_id
-            analysis_query = self.db.collection('analysis_results').where('metadata_id', '==', metadata_id).stream()
+            analysis_query = self.db.collection('analysis_results').where(filter=FieldFilter('metadata_id', '==', metadata_id)).stream()
             
             for analysis_doc in analysis_query:
                 analysis = analysis_doc.to_dict()
@@ -151,7 +152,7 @@ class DatabaseService:
                 analysis_with_metadata = {**metadata, **analysis}
                 
                 # Get details if available
-                details_query = self.db.collection('result_details').where('analysis_id', '==', analysis_id).limit(1).stream()
+                details_query = self.db.collection('result_details').where(filter=FieldFilter('analysis_id', '==', analysis_id)).limit(1).stream()
                 for details_doc in details_query:
                     analysis_with_metadata['details'] = details_doc.to_dict()
                 
@@ -181,7 +182,7 @@ class DatabaseService:
         metadata = metadata_doc.to_dict() if metadata_doc.exists else None
         
         # Get the related details
-        details_query = self.db.collection('result_details').where('analysis_id', '==', analysis_id).limit(1).stream()
+        details_query = self.db.collection('result_details').where(filter=FieldFilter('analysis_id', '==', analysis_id)).limit(1).stream()
         details = None
         for details_doc in details_query:
             details = details_doc.to_dict()
@@ -274,7 +275,7 @@ class DatabaseService:
             metadata_id = analysis.get('metadata_id')
             
             # Delete related details
-            details_query = self.db.collection('result_details').where('analysis_id', '==', analysis_id).stream()
+            details_query = self.db.collection('result_details').where(filter=FieldFilter('analysis_id', '==', analysis_id)).stream()
             for details_doc in details_query:
                 details_doc.reference.delete()
             
@@ -282,7 +283,7 @@ class DatabaseService:
             self.db.collection('analysis_results').document(analysis_id).delete()
             
             # Check if there are any other analyses using this metadata
-            other_analyses = list(self.db.collection('analysis_results').where('metadata_id', '==', metadata_id).limit(1).stream())
+            other_analyses = list(self.db.collection('analysis_results').where(filter=FieldFilter('metadata_id', '==', metadata_id)).limit(1).stream())
               # If no other analyses reference this metadata, delete the metadata too
             if not other_analyses and metadata_id:
                 self.db.collection('audio_metadata').document(metadata_id).delete()
