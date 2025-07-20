@@ -67,9 +67,19 @@ const HistoryPage = () => {
           confidence = 0.5;
         }
 
-        let resultText = analysis.is_deepfake
-          ? `${Math.round(confidence * 100)}% Fake`
-          : `${Math.round((1 - confidence) * 100)}% Real`;
+        // Calculate the percentage for the predicted class
+        const predictionConfidence = Math.round(confidence * 100);
+        
+        let resultText, resultPercentage, resultClassification;
+        if (analysis.is_deepfake) {
+          resultClassification = "Fake";
+          resultPercentage = predictionConfidence;
+        } else {
+          resultClassification = "Real";
+          resultPercentage = predictionConfidence;
+        }
+        
+        resultText = `${resultClassification} (${resultPercentage}%)`;
 
         // Extract audio details
         const detailsArray = [];
@@ -157,6 +167,8 @@ const HistoryPage = () => {
           date: formattedDate,
           fileName: analysis.filename || "Unknown File", // Direct access to filename
           result: resultText,
+          resultClassification: resultClassification,
+          resultPercentage: resultPercentage,
           isAI: isAI,
           confidence: Math.round(confidence * 100),
           duration: analysis.duration
@@ -522,7 +534,10 @@ const HistoryPage = () => {
                             className={`inline-block w-2 h-2 rounded-full mr-2 ${
                               item.isAI ? "bg-red-500" : "bg-green-500"
                             }`}></span>
-                          {item.result}
+                          <div className="flex flex-col">
+                            <span className="font-semibold">{item.resultClassification}</span>
+                            <span className="text-xs text-gray-500">{item.resultPercentage}% confidence</span>
+                          </div>
                         </div>
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">
