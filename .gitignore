@@ -21,3 +21,4 @@ backend/core/__pycache__/
 backend/cache/feature_weights.json
 backend/cache/wav2vec2_cache.json
 backend/data/data/validation/
+backend/utils/__pycache__/
