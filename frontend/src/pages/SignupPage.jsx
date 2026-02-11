@@ -17,10 +17,8 @@ const SignupPage = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    setError("");
   };
 
   const handleSubmit = async (e) => {
@@ -35,22 +33,18 @@ const SignupPage = () => {
     }
 
     try {
-      const signupData = {
+      const response = await api.signup({
         email: formData.email,
         password: formData.password,
         username: formData.username,
-      };
+      });
 
-      const response = await api.signup(signupData);
-
-      // Login the user
       login({
         token: response.token,
         user_id: response.user_id,
         username: formData.username,
       });
 
-      // Redirect to upload page
       navigate("/upload");
     } catch (err) {
       setError(err.message || "Failed to create account. Please try again.");
@@ -67,101 +61,70 @@ const SignupPage = () => {
           <h2>Create your account</h2>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit}>
           <div>
-            <label
-              htmlFor="username"
-              className="block text-sm font-medium text-gray-700">
-              Display Name
-            </label>
+            <label htmlFor="username">Display Name</label>
             <input
               type="text"
               id="username"
               name="username"
               value={formData.username}
               onChange={handleChange}
-              required
-              className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               placeholder="Enter your display name"
+              required
             />
           </div>
 
           <div>
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-gray-700">
-              Email address
-            </label>
+            <label htmlFor="email">Email address</label>
             <input
               type="email"
               id="email"
               name="email"
               value={formData.email}
               onChange={handleChange}
-              required
-              className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               placeholder="Enter your email"
+              required
             />
           </div>
 
           <div>
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium text-gray-700">
-              Password
-            </label>
+            <label htmlFor="password">Password</label>
             <input
               type="password"
               id="password"
               name="password"
               value={formData.password}
               onChange={handleChange}
-              required
-              className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               placeholder="Create a password"
+              required
             />
           </div>
 
           <div>
-            <label
-              htmlFor="confirmPassword"
-              className="block text-sm font-medium text-gray-700">
-              Confirm Password
-            </label>
+            <label htmlFor="confirmPassword">Confirm Password</label>
             <input
               type="password"
               id="confirmPassword"
               name="confirmPassword"
               value={formData.confirmPassword}
               onChange={handleChange}
-              required
-              className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               placeholder="Confirm your password"
+              required
             />
           </div>
 
-          {error && (
-            <div className="p-3 bg-red-50 text-red-800 rounded-lg text-sm">
-              {error}
-            </div>
-          )}
+          {error && <div className="auth-error">{error}</div>}
 
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition-all duration-200 disabled:opacity-50">
+          <button type="submit" disabled={isLoading}>
             {isLoading ? "Creating Account..." : "Create Account"}
           </button>
         </form>
 
-        <div className="mt-6 text-center">
-          <p className="text-sm text-gray-600">
+        <div className="auth-footer">
+          <p>
             Already have an account?{" "}
-            <Link
-              to="/login"
-              className="text-purple-600 hover:text-purple-700 font-medium">
-              Sign in
-            </Link>
+            <Link to="/login">Sign in</Link>
           </p>
         </div>
       </div>
