@@ -203,6 +203,10 @@ const UploadBox = () => {
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
               onClick={() => fileInputRef.current?.click()}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileInputRef.current?.click(); } }}
+              role="button"
+              tabIndex={0}
+              aria-label={file ? `Selected file: ${file.name}. Press to change file.` : "Click or drag to upload an audio file"}
             >
               <input
                 ref={fileInputRef}
@@ -210,12 +214,14 @@ const UploadBox = () => {
                 accept=".mp3,.wav,.flac"
                 onChange={handleFileSelect}
                 className="hidden"
+                aria-label="Choose audio file"
+                tabIndex={-1}
               />
 
               {file ? (
                 <div className="flex items-center justify-between">
                   <span className="text-gray-700 truncate">{file.name}</span>
-                  <button type="button" className="ml-4 text-xl text-gray-500 hover:text-red-500" onClick={clearFile}>
+                  <button type="button" className="ml-4 text-xl text-gray-500 hover:text-red-500" onClick={clearFile} aria-label={`Remove file ${file.name}`}>
                     ×
                   </button>
                 </div>
@@ -228,14 +234,15 @@ const UploadBox = () => {
               )}
             </div>
 
-            {error && <div className="text-sm text-center text-red-500">{error}</div>}
+            {error && <div className="text-sm text-center text-red-500" role="alert">{error}</div>}
 
             {/* Advanced toggle */}
             <div className="flex flex-col gap-3">
               <div className="flex items-center">
-                <label className="inline-flex items-center cursor-pointer">
+                <label htmlFor="advancedAnalysis" className="inline-flex items-center cursor-pointer">
                   <input
                     type="checkbox"
+                    id="advancedAnalysis"
                     className="sr-only peer"
                     checked={useAdvancedAnalysis}
                     onChange={() => setUseAdvancedAnalysis((prev) => !prev)}
@@ -251,8 +258,8 @@ const UploadBox = () => {
             <button
               type="submit"
               className={`w-full py-3 px-6 rounded-lg font-semibold text-white transition-all duration-200 ${!file
-                  ? "bg-gray-400 cursor-not-allowed"
-                  : "bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
                 }`}
               disabled={!file}
             >

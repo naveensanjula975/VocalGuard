@@ -114,7 +114,7 @@ const SignupPage = () => {
             />
           </div>
 
-          {error && <div className="auth-error">{error}</div>}
+          {error && <div className="auth-error" role="alert">{error}</div>}
 
           <button type="submit" disabled={isLoading}>
             {isLoading ? "Creating Account..." : "Create Account"}

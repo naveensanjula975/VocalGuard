@@ -74,7 +74,7 @@ const FeatureCard = ({ detail, confidence }) => {
       </div>
       <p className="text-sm text-gray-500 mt-2">{detail.description}</p>
       <div className="mt-3">
-        <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
+        <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden" role="progressbar" aria-valuenow={Math.round(negative ? confidence : 100 - confidence)} aria-valuemin={0} aria-valuemax={100} aria-label={`${detail.label}: ${Math.round(negative ? confidence : 100 - confidence)}%`}>
           <div
             className={`h-full ${negative ? RED.bar : GREEN.bar}`}
             style={{ width: `${negative ? confidence : 100 - confidence}%` }}
@@ -152,13 +152,13 @@ const DetailedAnalysis = ({ analysisData }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
               <div className="bg-white p-4 rounded-lg shadow">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">Voice Probability Analysis</h2>
-                <div className="h-72">
+                <div className="h-72" aria-label="Voice probability line chart">
                   <Line data={lineData} options={LINE_OPTIONS} />
                 </div>
               </div>
               <div className="bg-white p-4 rounded-lg shadow">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">Confidence Distribution</h2>
-                <div className="h-72">
+                <div className="h-72" aria-label="Confidence distribution pie chart">
                   <Pie data={pieData} options={PIE_OPTIONS} />
                 </div>
               </div>

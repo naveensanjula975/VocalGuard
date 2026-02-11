@@ -71,12 +71,12 @@ function formatOneAnalysis(analysis) {
 
 // ── Delete‑confirmation modal ────────────────
 const DeleteModal = ({ count, isDeleting, onConfirm, onCancel }) => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
     <div className="bg-white rounded-lg shadow-lg p-8 max-w-sm w-full text-center animate-fade-in">
       <svg className="mx-auto mb-4 w-12 h-12 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
       </svg>
-      <h2 className="text-xl font-semibold mb-2 text-gray-800">
+      <h2 id="delete-modal-title" className="text-xl font-semibold mb-2 text-gray-800">
         Delete {count} selected item{count > 1 ? "s" : ""}?
       </h2>
       <p className="text-gray-600 mb-6">
@@ -257,8 +257,9 @@ const HistoryPage = () => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-64 px-4 py-2 rounded-full bg-purple-50 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              aria-label="Search analysis history"
             />
-            <button className="absolute right-3 top-1/2 transform -translate-y-1/2">
+            <button className="absolute right-3 top-1/2 transform -translate-y-1/2" aria-label="Search">
               <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
@@ -269,11 +270,11 @@ const HistoryPage = () => {
 
       {/* Content area */}
       {loading ? (
-        <div className="flex justify-center items-center h-64">
+        <div className="flex justify-center items-center h-64" role="status" aria-label="Loading history">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-700" />
         </div>
       ) : error ? (
-        <div className="bg-red-50 p-4 rounded-lg text-center text-red-500">
+        <div className="bg-red-50 p-4 rounded-lg text-center text-red-500" role="alert">
           <p>{error}</p>
           {!user && (
             <button onClick={() => navigate("/login")} className="mt-4 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors">
@@ -298,11 +299,13 @@ const HistoryPage = () => {
                       checked={selectedItems.length === filteredHistory.length && filteredHistory.length > 0}
                       onChange={handleSelectAll}
                       className="rounded text-purple-600 focus:ring-purple-500"
+                      aria-label="Select all rows"
                     />
                   </th>
                   <th
                     className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
                     onClick={toggleDateSort}
+                    aria-sort={sortDirection === "desc" ? "descending" : "ascending"}
                   >
                     <div className="flex items-center space-x-1">
                       <span>Date</span>
@@ -330,6 +333,7 @@ const HistoryPage = () => {
                         checked={selectedItems.includes(item.id)}
                         onChange={() => handleItemSelect(item.id)}
                         className="rounded text-purple-600 focus:ring-purple-500"
+                        aria-label={`Select ${item.fileName}`}
                       />
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">{item.date}</td>

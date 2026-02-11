@@ -25,14 +25,25 @@ const Navbar = () => {
   const profileRef = useRef(null);
 
   // Close profile dropdown on outside click
+  // Close dropdowns on outside click or Escape
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (profileRef.current && !profileRef.current.contains(event.target)) {
         setIsProfileOpen(false);
       }
     };
+    const handleEscape = (event) => {
+      if (event.key === "Escape") {
+        setIsProfileOpen(false);
+        setIsMenuOpen(false);
+      }
+    };
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
   }, []);
 
   const handleLogout = async () => {
@@ -50,7 +61,7 @@ const Navbar = () => {
     : [...PUBLIC_LINKS, { to: "/login", label: "Login" }];
 
   return (
-    <nav className="relative px-4 py-4 mt-5 bg-white sm:px-8">
+    <nav className="relative px-4 py-4 mt-5 bg-white sm:px-8" aria-label="Main navigation">
       <div className="flex items-center justify-between mx-auto max-w-7xl">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2 no-underline">
@@ -70,6 +81,8 @@ const Navbar = () => {
             <div className="relative" ref={profileRef}>
               <button
                 onClick={() => setIsProfileOpen(!isProfileOpen)}
+                aria-haspopup="true"
+                aria-expanded={isProfileOpen}
                 className="flex items-center gap-2 text-gray-700 transition-colors duration-200 hover:text-purple-600"
               >
                 <div className="flex items-center justify-center w-8 h-8 bg-purple-100 rounded-full">
@@ -90,11 +103,11 @@ const Navbar = () => {
               </button>
 
               {isProfileOpen && (
-                <div className="absolute right-0 z-50 w-48 py-1 mt-2 bg-white rounded-lg shadow-lg">
-                  <Link to="/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-600">
+                <div className="absolute right-0 z-50 w-48 py-1 mt-2 bg-white rounded-lg shadow-lg" role="menu" aria-label="User menu">
+                  <Link to="/profile" role="menuitem" className="block px-4 py-2 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-600">
                     Profile Settings
                   </Link>
-                  <button onClick={handleLogout} className="block w-full px-4 py-2 text-sm text-left text-red-600 hover:bg-red-50">
+                  <button onClick={handleLogout} role="menuitem" className="block w-full px-4 py-2 text-sm text-left text-red-600 hover:bg-red-50">
                     Logout
                   </button>
                 </div>
@@ -124,6 +137,7 @@ const Navbar = () => {
       <div
         className={`md:hidden absolute top-full left-0 right-0 bg-white border-t border-gray-200 transform transition-all duration-300 ease-in-out ${isMenuOpen ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2 pointer-events-none"
           }`}
+        aria-hidden={!isMenuOpen}
       >
         <div className="flex flex-col gap-2 p-4">
           {navLinks.map((link) => (

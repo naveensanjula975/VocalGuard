@@ -55,7 +55,7 @@ const ForgotPasswordPage = () => {
           </div>
 
           {status.message && (
-            <div className={status.type === "success" ? "auth-success" : "auth-error"}>
+            <div className={status.type === "success" ? "auth-success" : "auth-error"} role="alert">
               {status.message}
             </div>
           )}

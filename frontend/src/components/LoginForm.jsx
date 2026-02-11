@@ -94,7 +94,7 @@ const LoginForm = () => {
             />
           </div>
 
-          {error && <div className="auth-error">{error}</div>}
+          {error && <div className="auth-error" role="alert">{error}</div>}
 
           <button
             type="submit"
