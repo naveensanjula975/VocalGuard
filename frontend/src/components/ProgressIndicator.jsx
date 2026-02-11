@@ -9,8 +9,15 @@ const ProgressIndicator = ({ progress, status }) => {
   return (
     <div className="flex flex-col items-center justify-center">
       <div className="relative">
-        {/* Background Circle */}
-        <svg className="w-24 h-24 transform -rotate-90">
+        {/* Progress ring */}
+        <svg
+          className="w-24 h-24 transform -rotate-90"
+          role="progressbar"
+          aria-valuenow={roundedProgress}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label={`Upload progress: ${roundedProgress}%`}
+        >
           <circle
             className="text-gray-200"
             strokeWidth="8"
@@ -20,7 +27,6 @@ const ProgressIndicator = ({ progress, status }) => {
             cx="48"
             cy="48"
           />
-          {/* Progress Circle */}
           <circle
             className="text-purple-500"
             strokeWidth="8"
@@ -35,14 +41,14 @@ const ProgressIndicator = ({ progress, status }) => {
           />
         </svg>
         {/* Percentage Text */}
-        <div className="absolute inset-0 flex items-center justify-center">
+        <div className="absolute inset-0 flex items-center justify-center" aria-hidden="true">
           <span className="text-xl font-semibold text-gray-700">
             {roundedProgress}%
           </span>
         </div>
       </div>
       {/* Status Text */}
-      <p className="mt-4 text-sm font-medium text-gray-600">{status}</p>
+      <p className="mt-4 text-sm font-medium text-gray-600" aria-live="polite">{status}</p>
     </div>
   );
 };
