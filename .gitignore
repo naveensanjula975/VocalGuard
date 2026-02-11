@@ -1,24 +1,190 @@
-Node.js
-node_modules/
-build/
+# ============================================================
+# VocalGuard - Audio Deepfake Detection System
+# .gitignore
+# ============================================================
 
-Environment variables
+# ------------------------------------------------------------
+# 1. Environment & Secrets
+# ------------------------------------------------------------
 .env
-
-.github/workflows/google-cloud-run.yml
-.github/workflows/firebase-hosting.yml
-Dockerfile
-backend/venv
-
-# Firebase
+.env.*
+!.env.example
 serviceAccountKey.json
-backend/__pycache__/
+backend/config/serviceAccountKey.json
+*.pem
+*.key
 
+# ------------------------------------------------------------
+# 2. Python (Backend)
+# ------------------------------------------------------------
+# Virtual environments
+backend/venv/
+venv/
+.venv/
+env/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+*.egg-info/
+*.egg
+dist/
+build/
+*.whl
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# ------------------------------------------------------------
+# 3. Node.js (Frontend)
+# ------------------------------------------------------------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+*.tsbuildinfo
+
+# Vite build output
+frontend/dist/
+frontend/dist-ssr/
+
+# Local env files (Vite convention)
+*.local
+
+# ------------------------------------------------------------
+# 4. ML Models & Data Artifacts
+# ------------------------------------------------------------
+# Large pre-trained model files (download or generate locally)
 backend/models/deepfake_audio_model/
-backend/services/__pycache__/
-backend/models/__pycache__/
-backend/core/__pycache__/
+
+# Cached feature weights and embeddings
 backend/cache/feature_weights.json
 backend/cache/wav2vec2_cache.json
+
+# Validation data (generated or downloaded locally)
 backend/data/data/validation/
-backend/utils/__pycache__/
+
+# Model checkpoints & training artifacts
+*.h5
+*.hdf5
+*.ckpt
+*.safetensors
+*.onnx
+*.pt
+*.pth
+!backend/models/**/*.py
+
+# Large dataset files
+*.csv
+*.parquet
+*.tfrecord
+!requirements*.txt
+
+# ------------------------------------------------------------
+# 5. Build & Deployment Artifacts
+# ------------------------------------------------------------
+build/
+Dockerfile
+docker-compose.override.yml
+
+# Firebase
+.firebase/
+firebase-debug.log
+.firebaserc
+
+# Google Cloud
+.gcloudignore
+
+# ------------------------------------------------------------
+# 6. CI/CD Workflows (generated / secret-bearing)
+# ------------------------------------------------------------
+# Uncomment below if these files contain secrets or are auto-generated
+# .github/workflows/google-cloud-run.yml
+# .github/workflows/firebase-hosting.yml
+
+# ------------------------------------------------------------
+# 7. IDE & Editor Files
+# ------------------------------------------------------------
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.swp
+*.swo
+*~
+
+# JetBrains
+*.iml
+.idea/
+
+# ------------------------------------------------------------
+# 8. Operating System Files
+# ------------------------------------------------------------
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Linux
+*~
+.directory
+
+# ------------------------------------------------------------
+# 9. Logs & Temporary Files
+# ------------------------------------------------------------
+logs/
+*.log
+tmp/
+temp/
+*.tmp
+*.bak
+*.orig
+
+# ------------------------------------------------------------
+# 10. Miscellaneous
+# ------------------------------------------------------------
+*.pid
+*.seed
+*.pid.lock
+.eslintcache
+docs/

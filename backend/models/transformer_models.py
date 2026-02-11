@@ -9,6 +9,10 @@ from safetensors.torch import load_file
 import os
 import math
 
+from logger import get_logger
+
+logger = get_logger(__name__)
+
 class MultiHeadAttention(nn.Module):
     """Multi-head attention mechanism for audio features"""
     
@@ -223,13 +227,13 @@ class TransformerDeepfakeDetector:
                 # Load weights into transformer model
                 if transformer_weights:
                     self.transformer_model.load_state_dict(transformer_weights, strict=False)
-                    print("Loaded transformer weights from safetensors")
+                    logger.info("Loaded transformer weights from safetensors")
                 else:
-                    print("No transformer weights found in safetensors file")
+                    logger.warning("No transformer weights found in safetensors file")
             else:
-                print(f"Safetensors file not found: {safetensors_path}")
+                logger.warning("Safetensors file not found: %s", safetensors_path)
         except Exception as e:
-            print(f"Error loading transformer weights: {e}")
+            logger.error("Error loading transformer weights: %s", e)
     
     def extract_features(self, audio_path):
         """Extract features from audio using Wav2Vec2"""
@@ -257,7 +261,7 @@ class TransformerDeepfakeDetector:
             return features
             
         except Exception as e:
-            print(f"Error extracting features: {e}")
+            logger.error("Error extracting features: %s", e)
             return None
     
     def detect(self, audio_path, threshold=0.5):
@@ -308,7 +312,7 @@ class TransformerDeepfakeDetector:
                 return result
                 
         except Exception as e:
-            print(f"Error in transformer detection: {e}")
+            logger.error("Error in transformer detection: %s", e)
             return {
                 "error": str(e),
                 "prediction": "error",
@@ -356,7 +360,7 @@ class TransformerDeepfakeDetector:
                 return attention_analysis
                 
         except Exception as e:
-            print(f"Error in attention analysis: {e}")
+            logger.error("Error in attention analysis: %s", e)
             return {"error": str(e)}
 
 def create_transformer_detector(model_path=None):

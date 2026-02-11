@@ -9,6 +9,10 @@ import time
 import json
 from pathlib import Path
 
+from logger import get_logger
+
+logger = get_logger(__name__)
+
 # Initialize Wav2Vec2 model and processor (lazy loading)
 _wav2vec2_model = None
 _wav2vec2_processor = None
@@ -43,7 +47,7 @@ def _get_audio_hash(audio_path):
         combined_hash = f"{metadata}_{content_hash}"
         return hashlib.md5(combined_hash.encode()).hexdigest()
     except Exception as e:
-        print(f"Error generating audio hash: {e}")
+        logger.warning("Error generating audio hash: %s", e)
         # Fallback to just the file path
         return hashlib.md5(audio_path.encode()).hexdigest()
 
@@ -123,7 +127,7 @@ def _get_wav2vec2():
     if _wav2vec2_model is None or _wav2vec2_processor is None:
         # Initialize model - using facebook/wav2vec2-base
         model_name = "facebook/wav2vec2-base"
-        print(f"Loading Wav2Vec2 model: {model_name}")
+        logger.info("Loading Wav2Vec2 model: %s", model_name)
         _wav2vec2_processor = Wav2Vec2Processor.from_pretrained(model_name)
         _wav2vec2_model = Wav2Vec2Model.from_pretrained(model_name)
         
@@ -203,7 +207,7 @@ def extract_features(audio_path, sr=16000, n_mfcc=40, use_wav2vec2=True):
             return features
         
     except Exception as e:
-        print(f"Error extracting features: {e}")
+        logger.error("Error extracting features: %s", e)
         # Return a zero vector as fallback - adjusted for potential Wav2Vec2 features
         fallback_size = 768 + n_mfcc * 2 + 3 if use_wav2vec2 else n_mfcc * 2 + 3
         return np.zeros(fallback_size)
@@ -236,7 +240,7 @@ def extract_wav2vec2_features(waveform_or_path, audio_path=None, max_length=1600
         
         # Check cache
         if audio_hash and audio_hash in _wav2vec2_cache:
-            print(f"Using cached Wav2Vec2 embedding for {audio_path}")
+            logger.debug("Using cached Wav2Vec2 embedding for %s", audio_path)
             return _wav2vec2_cache[audio_hash]['embedding']
         
         # Truncate or pad the waveform if necessary
@@ -272,6 +276,6 @@ def extract_wav2vec2_features(waveform_or_path, audio_path=None, max_length=1600
         return wav2vec2_embeddings
         
     except Exception as e:
-        print(f"Error extracting Wav2Vec2 features: {e}")
+        logger.error("Error extracting Wav2Vec2 features: %s", e)
         # Return zero vector with the typical Wav2Vec2 embedding size
         return np.zeros(768)  # Default size of Wav2Vec2 embeddings

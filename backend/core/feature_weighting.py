@@ -11,6 +11,10 @@ import os
 from pathlib import Path
 import json
 
+from logger import get_logger
+
+logger = get_logger(__name__)
+
 # Default weights
 DEFAULT_WEIGHTS = {
     'wav2vec2': 0.7,
@@ -158,7 +162,7 @@ def update_weights(new_weights):
         _feature_weights = {k: v/total for k, v in new_weights.items()}
         save_weights()
     else:
-        print("Invalid weights: sum must be greater than 0")
+        logger.warning("Invalid weights: sum must be greater than 0")
 
 # Load weights at module initialization
 load_weights()

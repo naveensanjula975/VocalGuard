@@ -1,437 +1,356 @@
+"""
+Deepfake detection orchestration.
+
+This module wires up the ML detectors and (optionally) persists results
+to Firestore.  It does NOT handle HTTP or temp-file concerns — those
+belong in the route layer.
+"""
+
+from __future__ import annotations
+
 import os
-import sys
-import torch
-import torchaudio
-import numpy as np
-import librosa
 import time
-import soundfile as sf
 import traceback
-from pathlib import Path
-from transformers import Wav2Vec2FeatureExtractor, AutoModelForAudioClassification
 
-# Add the parent directory to system path to enable relative imports
-sys.path.insert(0, str(Path(__file__).parent.parent))
+import librosa
+import numpy as np
+import torch
 
-# Updated relative imports
-from models.models import DeepFakeDetector
+from config import (
+    ANALYSIS_TYPE_TO_MODEL,
+    ENSEMBLE_TRANSFORMER_WEIGHT,
+    ENSEMBLE_WAV2VEC2_WEIGHT,
+    MODEL_DIR,
+    MODEL_VERSION,
+)
+from logger import get_logger
+from models.nn_models import DeepFakeDetector
 from models.transformer_models import TransformerDeepfakeDetector
 from services.database_service import DatabaseService
 
-# Model version for tracking
-MODEL_VERSION = "3.0.0"  # Updated to reflect wav2vec2-xlsr model integration
+logger = get_logger(__name__)
 
-# Path to the safetensors model directory (deepfake_audio_model subfolder)
-MODEL_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "models", "deepfake_audio_model")
+# ---------------------------------------------------------------------------
+# Wav2Vec2 classifier wrapper (unchanged public surface)
+# ---------------------------------------------------------------------------
+from transformers import Wav2Vec2FeatureExtractor, AutoModelForAudioClassification
+import soundfile as sf
+import torchaudio
+
 
 class DeepfakeAudioDetector:
-    def __init__(self, model_path):
-        """
-        Initialize the deepfake audio detector with a local model
-        
-        Args:
-            model_path (str): Path to the directory containing the saved model
-        """
+    """Wav2Vec2-based deepfake audio detector."""
+
+    def __init__(self, model_path: str) -> None:
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        print(f"Using device: {self.device}")
-        
-        # Load feature extractor and model from local directory
+        logger.info("DeepfakeAudioDetector using device: %s", self.device)
+
         self.feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(model_path)
-        self.model = AutoModelForAudioClassification.from_pretrained(model_path, use_safetensors=True).to(self.device)
-        
-        # Get class labels if available
-        self.id2label = self.model.config.id2label if hasattr(self.model.config, "id2label") else {0: "real", 1: "fake"}
-        print(f"Loaded model with labels: {self.id2label}")
-    
-    def preprocess_audio(self, audio_path):
-        """
-        Preprocess audio file to match model requirements
-        
-        Args:
-            audio_path (str): Path to the audio file
-        
-        Returns:
-            torch.Tensor: Processed audio input tensor
-        """
-        # Load audio with librosa (handles more formats)
+        self.model = AutoModelForAudioClassification.from_pretrained(
+            model_path, use_safetensors=True
+        ).to(self.device)
+
+        self.id2label: dict[int, str] = getattr(
+            self.model.config, "id2label", {0: "real", 1: "fake"}
+        )
+        logger.info("Model labels: %s", self.id2label)
+
+    # ----- audio I/O -----
+    def _load_audio(self, audio_path: str) -> np.ndarray:
+        """Load and resample audio to 16 kHz mono."""
         try:
-            # Option 1: Using librosa
-            waveform, sample_rate = librosa.load(audio_path, sr=16000)  # 16kHz is common for wav2vec2
-            
-            # Convert to float32 if not already
-            waveform = waveform.astype(np.float32)
-            
-        except Exception as e:
-            print(f"Librosa loading failed: {e}, trying torchaudio...")
-            # Option 2: Using torchaudio as fallback
-            waveform, sample_rate = torchaudio.load(audio_path)
-            
-            # Convert to mono if stereo
+            waveform, _ = librosa.load(audio_path, sr=16000)
+            return waveform.astype(np.float32)
+        except Exception:
+            logger.warning("librosa failed, falling back to torchaudio")
+            waveform, sr = torchaudio.load(audio_path)
             if waveform.shape[0] > 1:
                 waveform = torch.mean(waveform, dim=0)
-            
-            # Convert to numpy for feature extractor
-            waveform = waveform.numpy()
-            
-            # Resample if needed
-            if sample_rate != 16000:
-                waveform = librosa.resample(waveform, orig_sr=sample_rate, target_sr=16000)
-        
-        # Process through feature extractor
-        inputs = self.feature_extractor(
-            waveform, 
-            sampling_rate=16000, 
-            return_tensors="pt"
-        )
-        
-        return inputs
-    
-    def detect(self, audio_path, threshold=0.5):
-        """
-        Detect if an audio file is fake or real
-        
-        Args:
-            audio_path (str): Path to the audio file
-            threshold (float): Confidence threshold for classification
-            
-        Returns:
-            dict: Detection results including prediction, confidence scores, and label
-        """
-        # Preprocess audio
+            waveform_np = waveform.numpy()
+            if sr != 16000:
+                waveform_np = librosa.resample(waveform_np, orig_sr=sr, target_sr=16000)
+            return waveform_np
+
+    def preprocess_audio(self, audio_path: str) -> dict:
+        waveform = self._load_audio(audio_path)
+        return self.feature_extractor(waveform, sampling_rate=16000, return_tensors="pt")
+
+    # ----- inference -----
+    def detect(self, audio_path: str, threshold: float = 0.5) -> dict:
         inputs = self.preprocess_audio(audio_path)
-        
-        # Move inputs to device
-        inputs = {key: val.to(self.device) for key, val in inputs.items()}
-        
-        # Run inference
+        inputs = {k: v.to(self.device) for k, v in inputs.items()}
+
         with torch.no_grad():
-            outputs = self.model(**inputs)
-        
-        # Get predictions
-        logits = outputs.logits
-        probabilities = torch.nn.functional.softmax(logits, dim=1)
-        predictions = torch.argmax(probabilities, dim=1)
-        
-        # Convert to numpy
-        pred_idx = predictions[0].cpu().item()
-        confidence = probabilities[0][pred_idx].cpu().item()
-        all_probs = probabilities[0].cpu().numpy()
-        
-        # Return results
-        result = {
+            logits = self.model(**inputs).logits
+            probs = torch.nn.functional.softmax(logits, dim=1)
+            pred_idx = torch.argmax(probs, dim=1)[0].cpu().item()
+            confidence = probs[0][pred_idx].cpu().item()
+            all_probs = probs[0].cpu().numpy()
+
+        return {
             "prediction": self.id2label[pred_idx],
             "confidence": confidence,
             "label_index": pred_idx,
-            "probabilities": {self.id2label[i]: float(prob) for i, prob in enumerate(all_probs)},
-            "is_fake": pred_idx == 1 if "fake" in self.id2label.values() else (confidence > threshold)
+            "probabilities": {
+                self.id2label[i]: float(p) for i, p in enumerate(all_probs)
+            },
+            "is_fake": pred_idx == 1
+            if "fake" in self.id2label.values()
+            else (confidence > threshold),
         }
-        
-        return result
-def load_model(model_path=None):
-    """
-    Load the pre-trained deepfake detection model
-    """
+
+
+# ---------------------------------------------------------------------------
+# Private helpers
+# ---------------------------------------------------------------------------
+def _resolve_model_name(analysis_type: str) -> str:
+    return ANALYSIS_TYPE_TO_MODEL.get(analysis_type, "unknown-model")
+
+
+def _get_audio_metadata(audio_path: str) -> tuple[int, float, int]:
+    """Return ``(file_size, duration, sample_rate)`` for an audio file."""
+    file_size = os.path.getsize(audio_path)
+    try:
+        y, sr = librosa.load(audio_path, sr=None)
+        duration = librosa.get_duration(y=y, sr=sr)
+    except Exception as exc:
+        logger.warning("Could not read audio metadata: %s", exc)
+        duration, sr = 0.0, 16000
+    return file_size, duration, sr
+
+
+def _persist_results(
+    *,
+    user_id: str,
+    audio_path: str,
+    filename: str | None,
+    detection_result: dict,
+    features_used: list[str],
+    feature_scores: dict,
+    model_version: str,
+    processing_time: float,
+) -> dict[str, str]:
+    """Store analysis artifacts in Firestore and return the created IDs."""
+    db = DatabaseService()
+    file_size, duration, sample_rate = _get_audio_metadata(audio_path)
+    fname = filename or os.path.basename(audio_path)
+
+    metadata_id = db.create_audio_metadata(
+        user_id=user_id,
+        filename=fname,
+        file_size=file_size,
+        duration=duration,
+        sample_rate=sample_rate,
+    )
+    analysis_id = db.create_analysis_result(
+        metadata_id=metadata_id,
+        is_deepfake=detection_result["is_fake"],
+        confidence_score=detection_result["confidence"],
+        features_used=features_used,
+    )
+    details_id = db.create_result_details(
+        analysis_id=analysis_id,
+        feature_scores=feature_scores,
+        model_version=model_version,
+        processing_time=processing_time,
+    )
+    return {
+        "metadata_id": metadata_id,
+        "analysis_id": analysis_id,
+        "details_id": details_id,
+    }
+
+
+def _error_result(
+    exc: Exception,
+    analysis_type: str = "advanced",
+    filename: str | None = None,
+    audio_path: str | None = None,
+) -> dict:
+    """Build a standardised error-response dict."""
+    return {
+        "error": str(exc),
+        "probability": 0.0,
+        "is_fake": None,
+        "confidence": 0.0,
+        "label": "error",
+        "model_used": _resolve_model_name(analysis_type),
+        "processing_time": 0,
+        "filename": filename or (os.path.basename(audio_path) if audio_path else "unknown"),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Public API — unchanged signatures
+# ---------------------------------------------------------------------------
+def load_model(model_path: str | None = None) -> DeepFakeDetector:
     model = DeepFakeDetector()
-    
     if model_path and os.path.exists(model_path):
-        model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
-    
+        model.load_state_dict(torch.load(model_path, map_location=torch.device("cpu")))
     model.eval()
     return model
 
-def detect_deepfake(audio_path, user_id=None, store_results=True, filename=None, analysis_type="advanced"):
+
+def detect_deepfake(
+    audio_path: str,
+    user_id: str | None = None,
+    store_results: bool = True,
+    filename: str | None = None,
+    analysis_type: str = "advanced",
+) -> dict:
     """
-    Detect if an audio file is a deepfake using the Wav2Vec2 model in /models/deepfake_audio_model/.
-    
-    Args:
-        audio_path: Path to the audio file
-        user_id: Optional user ID to associate with the analysis
-        store_results: Whether to store results in Firebase database
-        filename: Original filename of the uploaded audio
-        analysis_type: Type of analysis ("standard" or "advanced")
-        
-    Returns:
-        dict: Results including probability of being fake, classification, and analysis IDs
+    Detect deepfake using the Wav2Vec2 model.
+
+    Public signature and return shape are unchanged from the original.
     """
-    start_time = time.time()
+    start = time.time()
     try:
-        # Initialize the detector with the model path
-        detector = DeepfakeAudioDetector(MODEL_DIR)
-        
-        # Detect if audio is fake
-        detection_result = detector.detect(audio_path)
-        
-        # Convert the detailed result to our API format
-        processing_time = (time.time() - start_time) * 1000  # ms
-        # Determine model name based on analysis type
-        model_name = ("wav2vec2-xlsr-deepfake" if analysis_type == "advanced" else 
-                     "standard-ml-classifier" if analysis_type == "standard" else
-                     "wav2vec2-demo" if analysis_type == "demo" else
-                     "unknown-model")
-        
-        result = {
-            "probability": detection_result["confidence"],
-            "is_fake": detection_result["is_fake"],
-            "confidence": detection_result["confidence"],
-            "label": detection_result["prediction"],
-            "model_used": model_name,
+        detector = DeepfakeAudioDetector(str(MODEL_DIR))
+        detection = detector.detect(audio_path)
+        processing_time = (time.time() - start) * 1000
+
+        result: dict = {
+            "probability": detection["confidence"],
+            "is_fake": detection["is_fake"],
+            "confidence": detection["confidence"],
+            "label": detection["prediction"],
+            "model_used": _resolve_model_name(analysis_type),
             "processing_time": processing_time,
-            "probabilities": detection_result["probabilities"],
-            "filename": filename or os.path.basename(audio_path)
-        }
-        
-        # Store results in Firebase if requested
-        if store_results and user_id:
-            try:
-                db_service = DatabaseService()
-                
-                # Get audio metadata
-                with open(audio_path, 'rb') as f:
-                    file_size = len(f.read())
-                
-                # Get audio duration and sample rate
-                try:
-                    audio_data, sample_rate = librosa.load(audio_path, sr=None)
-                    duration = librosa.get_duration(y=audio_data, sr=sample_rate)
-                except Exception as e:
-                    print(f"Error getting audio metadata: {e}")
-                    # Fallback values
-                    duration = 0
-                    sample_rate = 16000
-                
-                # Use provided filename or extract from path
-                if not filename:
-                    filename = os.path.basename(audio_path)
-                
-                # Save metadata in database
-                metadata_id = db_service.create_audio_metadata(
-                    user_id=user_id,
-                    filename=filename,
-                    file_size=file_size,
-                    duration=duration,
-                    sample_rate=sample_rate
-                )
-                
-                # Create analysis result
-                features_used = ["wav2vec2-xlsr"]
-                analysis_id = db_service.create_analysis_result(
-                    metadata_id=metadata_id,
-                    is_deepfake=result["is_fake"],
-                    confidence_score=result["confidence"],
-                    features_used=features_used
-                )
-                
-                # Create detailed results
-                feature_scores = {
-                    "probabilities": detection_result["probabilities"]
-                }
-                details_id = db_service.create_result_details(
-                    analysis_id=analysis_id,
-                    feature_scores=feature_scores,
-                    model_version=MODEL_VERSION,
-                    processing_time=processing_time
-                )
-                
-                # Add IDs to the result
-                result["metadata_id"] = metadata_id
-                result["analysis_id"] = analysis_id
-                result["details_id"] = details_id
-                
-            except Exception as db_error:
-                print(f"Error storing results in database: {db_error}")
-                # Continue even if database storage fails
-        
-        return result
-    except Exception as e:
-        print(f"Error in detect_deepfake: {str(e)}")
-        model_name = ("wav2vec2-xlsr-deepfake" if analysis_type == "advanced" else 
-                     "standard-ml-classifier" if analysis_type == "standard" else
-                     "wav2vec2-demo" if analysis_type == "demo" else
-                     "unknown-model")
-        
-        print(traceback.format_exc())
-        return {
-            "error": str(e),
-            "probability": 0.0,
-            "is_fake": None,
-            "confidence": 0.0,
-            "label": "error",
-            "model_used": model_name,
-            "processing_time": 0,
-            "filename": filename or (os.path.basename(audio_path) if audio_path else "unknown")
+            "probabilities": detection["probabilities"],
+            "filename": filename or os.path.basename(audio_path),
         }
 
-def detect_deepfake_ensemble(audio_path, user_id=None, store_results=True, filename=None, use_transformer=True):
+        if store_results and user_id:
+            try:
+                ids = _persist_results(
+                    user_id=user_id,
+                    audio_path=audio_path,
+                    filename=filename,
+                    detection_result=result,
+                    features_used=["wav2vec2-xlsr"],
+                    feature_scores={"probabilities": detection["probabilities"]},
+                    model_version=MODEL_VERSION,
+                    processing_time=processing_time,
+                )
+                result.update(ids)
+            except Exception as db_err:
+                logger.error("DB persistence failed: %s", db_err)
+
+        return result
+
+    except Exception as exc:
+        logger.exception("detect_deepfake failed")
+        return _error_result(exc, analysis_type, filename, audio_path)
+
+
+def detect_deepfake_ensemble(
+    audio_path: str,
+    user_id: str | None = None,
+    store_results: bool = True,
+    filename: str | None = None,
+    use_transformer: bool = True,
+) -> dict:
     """
-    Detect deepfake using ensemble of Wav2Vec2 and Transformer models
-    
-    Args:
-        audio_path: Path to the audio file
-        user_id: Optional user ID to associate with the analysis
-        store_results: Whether to store results in Firebase database
-        filename: Original filename of the uploaded audio
-        use_transformer: Whether to use transformer model in ensemble
-        
-    Returns:
-        dict: Enhanced results with ensemble predictions and attention analysis
+    Ensemble detection using Wav2Vec2 + Transformer models.
+
+    Public signature and return shape are unchanged from the original.
     """
-    start_time = time.time()
+    start = time.time()
     try:
-        # Get Wav2Vec2 results
-        wav2vec2_result = detect_deepfake(audio_path, user_id=None, store_results=False, filename=filename)
-        
-        results = {
+        # --- Wav2Vec2 leg ---
+        wav2vec2_result = detect_deepfake(
+            audio_path, user_id=None, store_results=False, filename=filename
+        )
+
+        results: dict = {
             "wav2vec2_result": wav2vec2_result,
             "transformer_result": None,
             "ensemble_result": None,
-            "attention_analysis": None
+            "attention_analysis": None,
         }
-        
+
+        # --- Transformer leg ---
         if use_transformer:
-            # Initialize transformer detector
-            transformer_detector = TransformerDeepfakeDetector(MODEL_DIR)
-            
-            # Get transformer results
-            transformer_result = transformer_detector.detect(audio_path)
+            transformer = TransformerDeepfakeDetector(str(MODEL_DIR))
+            transformer_result = transformer.detect(audio_path)
             results["transformer_result"] = transformer_result
-            
-            # Get attention analysis
-            attention_analysis = transformer_detector.get_attention_analysis(audio_path)
-            results["attention_analysis"] = attention_analysis
-            
-            # Ensemble prediction (weighted average)
+            results["attention_analysis"] = transformer.get_attention_analysis(audio_path)
+
+            # Ensemble only if both models succeeded
             if not wav2vec2_result.get("error") and not transformer_result.get("error"):
-                wav2vec2_confidence = wav2vec2_result.get("confidence", 0.0)
-                transformer_confidence = transformer_result.get("confidence", 0.0)
-                
-                # Weight the models (you can adjust these weights)
-                wav2vec2_weight = 0.6
-                transformer_weight = 0.4
-                
-                # Calculate ensemble confidence
-                ensemble_confidence = (wav2vec2_confidence * wav2vec2_weight + 
-                                     transformer_confidence * transformer_weight)
-                
-                # Ensemble prediction based on both models
-                wav2vec2_fake = wav2vec2_result.get("is_fake", False)
-                transformer_fake = transformer_result.get("is_fake", False)
-                
-                # Ensemble decision (majority vote with confidence weighting)
-                if wav2vec2_fake and transformer_fake:
-                    ensemble_prediction = True
-                elif not wav2vec2_fake and not transformer_fake:
-                    ensemble_prediction = False
-                else:
-                    # Use confidence to break ties
-                    ensemble_prediction = ensemble_confidence > 0.5
-                
-                ensemble_result = {
-                    "prediction": "fake" if ensemble_prediction else "real",
-                    "confidence": ensemble_confidence,
-                    "is_fake": ensemble_prediction,
-                    "model_used": "wav2vec2_transformer_ensemble",
-                    "wav2vec2_weight": wav2vec2_weight,
-                    "transformer_weight": transformer_weight,
-                    "individual_confidences": {
-                        "wav2vec2": wav2vec2_confidence,
-                        "transformer": transformer_confidence
-                    }
-                }
-                
-                results["ensemble_result"] = ensemble_result
-        
-        # Calculate total processing time
-        processing_time = (time.time() - start_time) * 1000
-        
-        # Use ensemble result if available, otherwise use wav2vec2 result
-        final_result = results.get("ensemble_result") or wav2vec2_result
-        final_result["processing_time"] = processing_time
-        final_result["filename"] = filename or os.path.basename(audio_path)
-        
-        # Store results in database if requested
-        if store_results and user_id and not final_result.get("error"):
-            try:
-                db_service = DatabaseService()
-                
-                # Get audio metadata
-                with open(audio_path, 'rb') as f:
-                    file_size = len(f.read())
-                
-                # Get audio duration and sample rate
-                try:
-                    audio_data, sample_rate = librosa.load(audio_path, sr=None)
-                    duration = librosa.get_duration(y=audio_data, sr=sample_rate)
-                except Exception as e:
-                    print(f"Error getting audio metadata: {e}")
-                    duration = 0
-                    sample_rate = 16000
-                
-                # Use provided filename or extract from path
-                if not filename:
-                    filename = os.path.basename(audio_path)
-                
-                # Save metadata in database
-                metadata_id = db_service.create_audio_metadata(
-                    user_id=user_id,
-                    filename=filename,
-                    file_size=file_size,
-                    duration=duration,
-                    sample_rate=sample_rate
+                w2v_conf = wav2vec2_result.get("confidence", 0.0)
+                tf_conf = transformer_result.get("confidence", 0.0)
+                ensemble_conf = (
+                    w2v_conf * ENSEMBLE_WAV2VEC2_WEIGHT
+                    + tf_conf * ENSEMBLE_TRANSFORMER_WEIGHT
                 )
-                
-                # Create analysis result
+
+                w2v_fake = wav2vec2_result.get("is_fake", False)
+                tf_fake = transformer_result.get("is_fake", False)
+
+                if w2v_fake == tf_fake:
+                    ensemble_pred = w2v_fake
+                else:
+                    ensemble_pred = ensemble_conf > 0.5
+
+                results["ensemble_result"] = {
+                    "prediction": "fake" if ensemble_pred else "real",
+                    "confidence": ensemble_conf,
+                    "is_fake": ensemble_pred,
+                    "model_used": "wav2vec2_transformer_ensemble",
+                    "wav2vec2_weight": ENSEMBLE_WAV2VEC2_WEIGHT,
+                    "transformer_weight": ENSEMBLE_TRANSFORMER_WEIGHT,
+                    "individual_confidences": {
+                        "wav2vec2": w2v_conf,
+                        "transformer": tf_conf,
+                    },
+                }
+
+        processing_time = (time.time() - start) * 1000
+        final = results.get("ensemble_result") or wav2vec2_result
+        final["processing_time"] = processing_time
+        final["filename"] = filename or os.path.basename(audio_path)
+
+        # --- Persist ---
+        if store_results and user_id and not final.get("error"):
+            try:
                 features_used = ["wav2vec2-xlsr"]
                 if use_transformer:
                     features_used.append("transformer-attention")
-                
-                analysis_id = db_service.create_analysis_result(
-                    metadata_id=metadata_id,
-                    is_deepfake=final_result["is_fake"],
-                    confidence_score=final_result["confidence"],
-                    features_used=features_used
-                )
-                
-                # Create detailed results with ensemble information
-                feature_scores = {
+
+                feature_scores: dict = {
                     "wav2vec2_probabilities": wav2vec2_result.get("probabilities", {}),
                     "ensemble_result": results.get("ensemble_result"),
-                    "attention_analysis": results.get("attention_analysis")
+                    "attention_analysis": results.get("attention_analysis"),
                 }
-                
                 if results.get("transformer_result"):
-                    feature_scores["transformer_probabilities"] = results["transformer_result"].get("probabilities", {})
-                    feature_scores["attention_weights"] = results["transformer_result"].get("attention_weights", [])
-                
-                details_id = db_service.create_result_details(
-                    analysis_id=analysis_id,
+                    feature_scores["transformer_probabilities"] = (
+                        results["transformer_result"].get("probabilities", {})
+                    )
+                    feature_scores["attention_weights"] = (
+                        results["transformer_result"].get("attention_weights", [])
+                    )
+
+                ids = _persist_results(
+                    user_id=user_id,
+                    audio_path=audio_path,
+                    filename=filename,
+                    detection_result=final,
+                    features_used=features_used,
                     feature_scores=feature_scores,
-                    model_version=f"{MODEL_VERSION}_ensemble" if use_transformer else MODEL_VERSION,
-                    processing_time=processing_time
+                    model_version=(
+                        f"{MODEL_VERSION}_ensemble" if use_transformer else MODEL_VERSION
+                    ),
+                    processing_time=processing_time,
                 )
-                
-                # Add IDs to the result
-                final_result["metadata_id"] = metadata_id
-                final_result["analysis_id"] = analysis_id
-                final_result["details_id"] = details_id
-                
-            except Exception as db_error:
-                print(f"Error storing ensemble results in database: {db_error}")
-        
-        # Add all results to final response
-        final_result["detailed_results"] = results
-        
-        return final_result
-        
-    except Exception as e:
-        print(f"Error in detect_deepfake_ensemble: {str(e)}")
-        print(traceback.format_exc())
-        return {
-            "error": str(e),
-            "probability": 0.0,
-            "is_fake": None,
-            "confidence": 0.0,
-            "label": "error",
-            "model_used": "ensemble",
-            "processing_time": 0,
-            "filename": filename or (os.path.basename(audio_path) if audio_path else "unknown")
-        }
+                final.update(ids)
+
+            except Exception as db_err:
+                logger.error("DB persistence (ensemble) failed: %s", db_err)
+
+        final["detailed_results"] = results
+        return final
+
+    except Exception as exc:
+        logger.exception("detect_deepfake_ensemble failed")
+        return _error_result(exc, "ensemble", filename, audio_path)
