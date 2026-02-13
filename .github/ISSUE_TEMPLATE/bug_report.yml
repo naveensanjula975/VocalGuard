@@ -1,0 +1,72 @@
+name: "🐛 Bug Report"
+description: Report a bug to help us improve VocalGuard
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### 🛑 Stop! 
+        Before reporting, please check existing issues to see if this has already been reported.
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear and concise description of what the bug is.
+      placeholder: "e.g., Audio analysis fails when uploading WAV files over 10MB."
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps To Reproduce
+      description: Provide a link to a live example, or an unambiguous set of steps to reproduce this bug.
+      placeholder: |
+        1. Go to '...'
+        2. Click on '....'
+        3. Scroll down to '....'
+        4. See error
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: A clear and concise description of what you expected to happen.
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: OS version, Browser version, etc.
+      placeholder: "Windows 11, Chrome 120"
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / Context
+      description: Paste any browser console logs or backend traceback here.
+      render: shell
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected Area
+      options:
+        - Frontend (React)
+        - Backend (FastAPI)
+        - ML Models (Wav2Vec2/Transformer)
+        - Deployment / CI/CD
+        - Documentation
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: If applicable, add screenshots to help explain your problem.
+  - type: checkmarks
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I have searched the existing issues
+          required: true
+        - label: I am using the latest version of VocalGuard
+          required: true
