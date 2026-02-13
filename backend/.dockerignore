@@ -1,0 +1,44 @@
+# =============================================================================
+# VocalGuard Backend — .dockerignore
+# =============================================================================
+# Keep the Docker build context small and exclude secrets/dev files.
+# =============================================================================
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+
+# Environment files (secrets — injected at runtime via env vars)
+.env
+.env.*
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Git
+.git/
+.gitignore
+
+# Tests and docs
+tests/
+docs/
+*.md
+
+# ML model weights (pulled from cloud storage at runtime)
+models/deepfake_audio_model/
+data/data/validation/
+
+# Cache files
+cache/
+*.log
