@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { Line, Pie } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -56,15 +56,16 @@ function isNegativeIndicator(value) {
   return lower.includes("artificial") || lower.includes("abnormal") || lower.includes("ai");
 }
 
-// ── Small sub-components ─────────────────────
-const InfoRow = ({ label, value, valueClass = "" }) => (
+// ── Small sub-components (memoized) ──────────
+const InfoRow = React.memo(({ label, value, valueClass = "" }) => (
   <div className="flex justify-between">
     <span className="text-gray-600">{label}</span>
     <span className={`font-medium ${valueClass}`}>{value}</span>
   </div>
-);
+));
+InfoRow.displayName = "InfoRow";
 
-const FeatureCard = ({ detail, confidence }) => {
+const FeatureCard = React.memo(({ detail, confidence }) => {
   const negative = isNegativeIndicator(detail.value);
   return (
     <div className="bg-white p-3 rounded shadow-sm">
@@ -83,22 +84,26 @@ const FeatureCard = ({ detail, confidence }) => {
       </div>
     </div>
   );
-};
+});
+FeatureCard.displayName = "FeatureCard";
 
 // ── Main component ───────────────────────────
 const DetailedAnalysis = ({ analysisData }) => {
   const { isAI, confidence } = analysisData;
-  const curves = isAI ? PROBABILITY_CURVES.ai : PROBABILITY_CURVES.human;
 
-  const lineData = {
-    labels: TIME_LABELS,
-    datasets: [
-      { label: "Human Voice Probability", data: curves.human, borderColor: GREEN.border, backgroundColor: GREEN.bg, tension: 0.4, fill: true, pointRadius: 4, pointHoverRadius: 6 },
-      { label: "AI Voice Probability", data: curves.ai, borderColor: RED.border, backgroundColor: RED.bg, tension: 0.4, fill: true, pointRadius: 4, pointHoverRadius: 6 },
-    ],
-  };
+  // ── Memoize chart data objects (expensive for Chart.js) ──
+  const lineData = useMemo(() => {
+    const curves = isAI ? PROBABILITY_CURVES.ai : PROBABILITY_CURVES.human;
+    return {
+      labels: TIME_LABELS,
+      datasets: [
+        { label: "Human Voice Probability", data: curves.human, borderColor: GREEN.border, backgroundColor: GREEN.bg, tension: 0.4, fill: true, pointRadius: 4, pointHoverRadius: 6 },
+        { label: "AI Voice Probability", data: curves.ai, borderColor: RED.border, backgroundColor: RED.bg, tension: 0.4, fill: true, pointRadius: 4, pointHoverRadius: 6 },
+      ],
+    };
+  }, [isAI]);
 
-  const pieData = {
+  const pieData = useMemo(() => ({
     labels: ["Human", "AI"],
     datasets: [{
       data: isAI ? [100 - confidence, confidence] : [confidence, 100 - confidence],
@@ -106,11 +111,14 @@ const DetailedAnalysis = ({ analysisData }) => {
       borderColor: [GREEN.border, RED.border],
       borderWidth: 1,
     }],
-  };
+  }), [isAI, confidence]);
 
-  const tone = isAI
-    ? { bg: "bg-red-50", iconBg: "bg-red-100", iconColor: "text-red-500", titleColor: "text-red-700" }
-    : { bg: "bg-green-50", iconBg: "bg-green-100", iconColor: "text-green-500", titleColor: "text-green-700" };
+  const tone = useMemo(() =>
+    isAI
+      ? { bg: "bg-red-50", iconBg: "bg-red-100", iconColor: "text-red-500", titleColor: "text-red-700" }
+      : { bg: "bg-green-50", iconBg: "bg-green-100", iconColor: "text-green-500", titleColor: "text-green-700" },
+    [isAI],
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
@@ -228,4 +236,4 @@ const DetailedAnalysis = ({ analysisData }) => {
   );
 };
 
-export default DetailedAnalysis;
+export default React.memo(DetailedAnalysis);

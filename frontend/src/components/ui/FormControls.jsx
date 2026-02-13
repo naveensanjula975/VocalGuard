@@ -1,11 +1,11 @@
 import React from "react";
 
-// ─── Reusable sub-components for ProfilePage ───
+// ─── Reusable sub-components for ProfilePage (memoized) ───
 
 /**
  * Small card showing one statistic (title, value, icon).
  */
-export const StatCard = ({ title, value, icon }) => (
+export const StatCard = React.memo(({ title, value, icon }) => (
     <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
         <div className="flex items-center justify-between">
             <div>
@@ -15,12 +15,13 @@ export const StatCard = ({ title, value, icon }) => (
             <div className="text-2xl">{icon}</div>
         </div>
     </div>
-);
+));
+StatCard.displayName = "StatCard";
 
 /**
  * Consistent text input used across the profile form.
  */
-export const ProfileField = ({
+export const ProfileField = React.memo(({
     label,
     type = "text",
     name,
@@ -49,12 +50,13 @@ export const ProfileField = ({
             />
         </div>
     );
-};
+});
+ProfileField.displayName = "ProfileField";
 
 /**
  * Toggle switch used in the preferences panel.
  */
-export const ToggleSwitch = ({ name, label, description, checked, onChange }) => (
+export const ToggleSwitch = React.memo(({ name, label, description, checked, onChange }) => (
     <div className="flex items-center justify-between">
         <div>
             <label className="text-sm font-medium text-gray-700">{label}</label>
@@ -71,12 +73,13 @@ export const ToggleSwitch = ({ name, label, description, checked, onChange }) =>
             <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600" />
         </label>
     </div>
-);
+));
+ToggleSwitch.displayName = "ToggleSwitch";
 
 /**
  * Select dropdown used in preferences panel.
  */
-export const SelectField = ({ label, name, value, onChange, options }) => (
+export const SelectField = React.memo(({ label, name, value, onChange, options }) => (
     <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
             {label}
@@ -94,12 +97,13 @@ export const SelectField = ({ label, name, value, onChange, options }) => (
             ))}
         </select>
     </div>
-);
+));
+SelectField.displayName = "SelectField";
 
 /**
  * Warning/info banner with icon, title, and body text.
  */
-export const AlertBanner = ({
+export const AlertBanner = React.memo(({
     variant = "yellow",
     icon,
     title,
@@ -143,4 +147,5 @@ export const AlertBanner = ({
             </div>
         </div>
     );
-};
+});
+AlertBanner.displayName = "AlertBanner";

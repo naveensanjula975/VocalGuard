@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import DetailedAnalysis from "../components/DetailedAnalysis";
 import { useAuth } from "../context/AuthContext";
@@ -17,14 +17,18 @@ const DetailedAnalysisPage = () => {
     location.state?.analysisData || null,
   );
 
+  // ── Use a ref to capture the initial nav-state without triggering re-fetches ──
+  const initialNavState = useRef(location.state?.analysisData);
+  const token = user?.token;
+
   useEffect(() => {
     const fetchAnalysisData = async () => {
       // Skip fetch if we already have data from navigation state
-      if (location.state?.analysisData || !id || !user?.token) return;
+      if (initialNavState.current || !id || !token) return;
 
       setLoading(true);
       try {
-        const data = await api.getAnalysisById(id, user.token);
+        const data = await api.getAnalysisById(id, token);
 
         if (!data) {
           setError("Analysis not found");
@@ -41,18 +45,23 @@ const DetailedAnalysisPage = () => {
     };
 
     fetchAnalysisData();
-  }, [id, user, location.state]);
+  }, [id, token]);
 
   // Redirect to history if no data and not loading
-  if (!analysisData && !loading && !error) {
-    navigate("/history");
-    return null;
-  }
+  useEffect(() => {
+    if (!analysisData && !loading && !error) {
+      navigate("/history");
+    }
+  }, [analysisData, loading, error, navigate]);
 
-  const handleBackToResult = () => {
+  const handleBackToResult = useCallback(() => {
     const analysisId = analysisData?.rawData?.id || id;
     navigate(analysisId ? `/result/${analysisId}` : "/history");
-  };
+  }, [analysisData?.rawData?.id, id, navigate]);
+
+  if (!analysisData && !loading && !error) {
+    return null;
+  }
 
   return (
     <div>

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
 import { api } from "../services/api";
 
 const AuthContext = createContext(null);
@@ -93,8 +93,14 @@ export const AuthProvider = ({ children }) => {
     }));
   }, []);
 
+  // ── Memoize context value to prevent cascading re-renders ──
+  const contextValue = useMemo(
+    () => ({ user, login, logout, updateUser, loading, authError, setAuthError }),
+    [user, login, logout, updateUser, loading, authError],
+  );
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, updateUser, loading, authError, setAuthError }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );

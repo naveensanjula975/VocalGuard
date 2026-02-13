@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { api } from "../services/api";
@@ -120,38 +120,28 @@ const ProfilePage = () => {
   const [loading, setLoading] = useState(false);
 
   // ── Helpers ──────────────────────────────
-  const clearMessages = () => {
+  const clearMessages = useCallback(() => {
     setError("");
     setSuccess("");
-  };
+  }, []);
 
-  const handleFieldChange = (setter) => (e) => {
+  // Memoized HOF — returns a stable handler for each setter
+  const handleFieldChange = useCallback((setter) => (e) => {
     const { name, value, type, checked } = e.target;
     setter((prev) => ({
       ...prev,
       [name]: type === "checkbox" ? checked : value,
     }));
-  };
+  }, []);
+
+  // ── Stable token for deps ──────────────
+  const token = user?.token;
 
   // ── Data fetching ────────────────────────
-  useEffect(() => {
-    if (!user) {
-      navigate("/login");
-      return;
-    }
-    setProfileData((prev) => ({
-      ...prev,
-      username: user.username || "",
-      email: user.email || "",
-      joinDate: new Date().toLocaleDateString(),
-    }));
-    fetchUserStats();
-  }, [user, navigate]);
-
-  const fetchUserStats = async () => {
+  const fetchUserStats = useCallback(async () => {
     try {
-      if (!user?.token) return;
-      const response = await api.getUserAnalyses(user.token);
+      if (!token) return;
+      const response = await api.getUserAnalyses(token);
       const analyses = response.analyses || [];
       setStats({
         totalAnalyses: analyses.length,
@@ -165,7 +155,21 @@ const ProfilePage = () => {
     } catch (err) {
       console.error("Error fetching user stats:", err);
     }
-  };
+  }, [token]);
+
+  useEffect(() => {
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+    setProfileData((prev) => ({
+      ...prev,
+      username: user.username || "",
+      email: user.email || "",
+      joinDate: new Date().toLocaleDateString(),
+    }));
+    fetchUserStats();
+  }, [user, navigate, fetchUserStats]);
 
   // ── Save handlers ────────────────────────
   const handleSaveProfile = async () => {
@@ -297,8 +301,8 @@ const ProfilePage = () => {
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${activeTab === tab.id
-                      ? "border-purple-500 text-purple-600"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    ? "border-purple-500 text-purple-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                     }`}
                 >
                   <span>{tab.icon}</span>

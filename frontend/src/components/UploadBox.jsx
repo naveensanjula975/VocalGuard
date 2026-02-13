@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../services/api";
 import { useNavigate } from "react-router-dom";
@@ -43,8 +43,18 @@ const UploadBox = () => {
   const fileInputRef = useRef(null);
   const progressIntervalRef = useRef(null);
 
+  // ── Cleanup interval on unmount (prevents memory leak) ──
+  useEffect(() => {
+    return () => {
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
+    };
+  }, []);
+
   // ── File validation ────────────────────
-  const validateFile = (f) => {
+  const validateFile = useCallback((f) => {
     if (!f) return false;
     if (!VALID_TYPES.includes(f.type)) {
       setError("Please upload only MP3, WAV or FLAC files");
@@ -55,20 +65,20 @@ const UploadBox = () => {
       return false;
     }
     return true;
-  };
+  }, []);
 
   // ── Drag & drop handlers ───────────────
-  const handleDragOver = (e) => {
+  const handleDragOver = useCallback((e) => {
     e.preventDefault();
     setIsDragging(true);
-  };
+  }, []);
 
-  const handleDragLeave = (e) => {
+  const handleDragLeave = useCallback((e) => {
     e.preventDefault();
     setIsDragging(false);
-  };
+  }, []);
 
-  const handleDrop = (e) => {
+  const handleDrop = useCallback((e) => {
     e.preventDefault();
     setIsDragging(false);
     const droppedFile = e.dataTransfer.files[0];
@@ -76,24 +86,24 @@ const UploadBox = () => {
       setFile(droppedFile);
       setError("");
     }
-  };
+  }, [validateFile]);
 
-  const handleFileSelect = (e) => {
+  const handleFileSelect = useCallback((e) => {
     const selectedFile = e.target.files[0];
     if (validateFile(selectedFile)) {
       setFile(selectedFile);
       setError("");
     }
-  };
+  }, [validateFile]);
 
-  const clearFile = (e) => {
+  const clearFile = useCallback((e) => {
     e.stopPropagation();
     setFile(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
-  };
+  }, []);
 
   // ── Progress simulation ────────────────
-  const startFakeProgress = (cap = 95) => {
+  const startFakeProgress = useCallback((cap = 95) => {
     let progress = 0;
     progressIntervalRef.current = setInterval(() => {
       progress += Math.random() * 10;
@@ -101,17 +111,35 @@ const UploadBox = () => {
       setUploadProgress(Math.min(progress, cap));
       setUploadStatus(getStatusMessage(progress));
     }, 500);
-  };
+  }, []);
 
-  const stopFakeProgress = () => {
+  const stopFakeProgress = useCallback(() => {
     if (progressIntervalRef.current) {
       clearInterval(progressIntervalRef.current);
       progressIntervalRef.current = null;
     }
-  };
+  }, []);
+
+  // ── Toggle advanced analysis ───────────
+  const toggleAdvanced = useCallback(() => {
+    setUseAdvancedAnalysis((prev) => !prev);
+  }, []);
+
+  // ── Trigger file input ─────────────────
+  const triggerFileInput = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  // ── Keyboard handler for drop zone ─────
+  const handleDropZoneKeyDown = useCallback((e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      fileInputRef.current?.click();
+    }
+  }, []);
 
   // ── Submit ─────────────────────────────
-  const handleSubmit = async (e) => {
+  const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
     if (!file) {
       setError("Please select a file");
@@ -175,7 +203,7 @@ const UploadBox = () => {
 
       setIsUploading(false);
     }
-  };
+  }, [file, user?.token, useAdvancedAnalysis, startFakeProgress, stopFakeProgress, navigate]);
 
   // ── Render ─────────────────────────────
   return (
@@ -202,8 +230,8 @@ const UploadBox = () => {
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
-              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileInputRef.current?.click(); } }}
+              onClick={triggerFileInput}
+              onKeyDown={handleDropZoneKeyDown}
               role="button"
               tabIndex={0}
               aria-label={file ? `Selected file: ${file.name}. Press to change file.` : "Click or drag to upload an audio file"}
@@ -245,7 +273,7 @@ const UploadBox = () => {
                     id="advancedAnalysis"
                     className="sr-only peer"
                     checked={useAdvancedAnalysis}
-                    onChange={() => setUseAdvancedAnalysis((prev) => !prev)}
+                    onChange={toggleAdvanced}
                   />
                   <div className="relative w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-purple-300 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600" />
                   <span className="ms-3 text-sm font-medium text-gray-900">

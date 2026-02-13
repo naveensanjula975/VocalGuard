@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useLocation, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../services/api";
@@ -13,20 +13,21 @@ export default function ResultPage() {
   const { id } = useParams();
   const { user } = useAuth();
 
-  // Result data passed directly from upload flow
-  const initialResult = location.state?.result;
+  // ── Capture initial result from navigation state (stable ref) ──
+  const initialResult = useRef(location.state?.result);
+  const token = user?.token;
 
   useEffect(() => {
-    if (initialResult) {
-      setAnalysisData(initialResult);
+    if (initialResult.current) {
+      setAnalysisData(initialResult.current);
       return;
     }
 
     const fetchAnalysis = async () => {
-      if (!id || !user?.token) return;
+      if (!id || !token) return;
       setLoading(true);
       try {
-        const data = await api.getAnalysisById(id, user.token);
+        const data = await api.getAnalysisById(id, token);
         if (data) {
           setAnalysisData(formatForResultComponent(data));
         }
@@ -39,7 +40,7 @@ export default function ResultPage() {
     };
 
     fetchAnalysis();
-  }, [id, user, initialResult]);
+  }, [id, token]);
 
   if (loading) {
     return (

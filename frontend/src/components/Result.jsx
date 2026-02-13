@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useCallback, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import jsPDF from "jspdf";
 import domtoimage from "dom-to-image";
@@ -16,15 +16,16 @@ function formatConfidence(raw) {
   return `${Math.round(n)}%`;
 }
 
-// ── Small presentational pieces ──────────────
-const InfoCell = ({ label, value }) => (
+// ── Small presentational pieces (memoized) ───
+const InfoCell = React.memo(({ label, value }) => (
   <div>
     <p className="text-sm text-gray-500">{label}</p>
     <p className="font-medium">{value}</p>
   </div>
-);
+));
+InfoCell.displayName = "InfoCell";
 
-const ActionButton = ({ onClick, disabled, className, icon, children, title }) => (
+const ActionButton = React.memo(({ onClick, disabled, className, icon, children, title }) => (
   <button
     onClick={onClick}
     disabled={disabled}
@@ -34,17 +35,18 @@ const ActionButton = ({ onClick, disabled, className, icon, children, title }) =
     {icon}
     {children}
   </button>
-);
+));
+ActionButton.displayName = "ActionButton";
 
 // ── Clipboard toast (React state, not DOM manipulation) ──
-const CopyLinkButton = ({ url }) => {
+const CopyLinkButton = React.memo(({ url }) => {
   const [copied, setCopied] = useState(false);
 
-  const handleCopy = async () => {
+  const handleCopy = useCallback(async () => {
     await navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  };
+  }, [url]);
 
   return (
     <div className="relative">
@@ -65,7 +67,8 @@ const CopyLinkButton = ({ url }) => {
       )}
     </div>
   );
-};
+});
+CopyLinkButton.displayName = "CopyLinkButton";
 
 // ── Spinner for PDF button ───────────────────
 const SpinnerIcon = () => (
@@ -114,18 +117,22 @@ const Result = ({ result: propResult }) => {
   const pdfRef = useRef();
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
-  if (!result) {
-    navigate("/upload");
-    return null;
-  }
+  // ── Redirect via useEffect instead of during render ──
+  useEffect(() => {
+    if (!result) {
+      navigate("/upload");
+    }
+  }, [result, navigate]);
 
-  const shareUrl = window.location.href;
-  const shareTitle = `VocalGuard Analysis Result: ${result.is_fake ? "AI Generated" : "Human Voice"}`;
-  const modelUsed = result.model_used || result.modelUsed || "Standard";
+  const shareUrl = typeof window !== "undefined" ? window.location.href : "";
+  const shareTitle = result
+    ? `VocalGuard Analysis Result: ${result.is_fake ? "AI Generated" : "Human Voice"}`
+    : "";
+  const modelUsed = result?.model_used || result?.modelUsed || "Standard";
   const isAdvancedModel = modelUsed === "wav2vec2-xlsr-deepfake";
 
-  // ── PDF generation ─────────────────────
-  const generatePDF = async () => {
+  // ── Memoized PDF generation ────────────────
+  const generatePDF = useCallback(async () => {
     try {
       setIsGeneratingPDF(true);
       if (!pdfRef.current) throw new Error("PDF reference not found");
@@ -189,7 +196,27 @@ const Result = ({ result: propResult }) => {
     } finally {
       setIsGeneratingPDF(false);
     }
-  };
+  }, []);
+
+  // ── Navigation handlers (memoized) ─────────
+  const handleGoToAnalysis = useCallback(() => {
+    if (result?.analysis_id) {
+      navigate(`/analysis/${result.analysis_id}`);
+    }
+  }, [navigate, result?.analysis_id]);
+
+  const handleGoToUpload = useCallback(() => {
+    navigate("/upload");
+  }, [navigate]);
+
+  const handleGoHome = useCallback(() => {
+    navigate("/");
+  }, [navigate]);
+
+  // Early return after hooks
+  if (!result) {
+    return null;
+  }
 
   // ── Render ─────────────────────────────
   return (
@@ -321,7 +348,7 @@ const Result = ({ result: propResult }) => {
             <div className="flex flex-wrap justify-end gap-3 mt-6 pdf-exclude-buttons">
               {result.analysis_id && (
                 <ActionButton
-                  onClick={() => navigate(`/analysis/${result.analysis_id}`)}
+                  onClick={handleGoToAnalysis}
                   title="View advanced visualization and detailed feature analysis"
                   className="text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800"
                   icon={<BookIcon />}
@@ -341,7 +368,7 @@ const Result = ({ result: propResult }) => {
               </ActionButton>
 
               <ActionButton
-                onClick={() => navigate("/upload")}
+                onClick={handleGoToUpload}
                 title="Upload a new audio file for analysis"
                 className="text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 hover:border-slate-400 active:bg-slate-100"
                 icon={<UploadIcon />}
@@ -350,7 +377,7 @@ const Result = ({ result: propResult }) => {
               </ActionButton>
 
               <ActionButton
-                onClick={() => navigate("/")}
+                onClick={handleGoHome}
                 title="Return to the homepage"
                 className="text-white bg-purple-600 hover:bg-purple-700 active:bg-purple-800"
                 icon={<HomeIcon />}
