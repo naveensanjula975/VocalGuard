@@ -35,7 +35,7 @@ def collection_links(
     """Return ``_links`` for a paginated collection response."""
     base = f"{API_V1_PREFIX}/analyses"
     links: dict = {
-        "self": {"href": f"{base}?per_page={per_page}" + (f"&after={next_cursor}" if False else "")},
+        "self": {"href": f"{base}?per_page={per_page}"},
     }
     if has_next and next_cursor:
         links["next"] = {"href": f"{base}?per_page={per_page}&after={next_cursor}"}

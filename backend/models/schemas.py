@@ -7,7 +7,7 @@ These are pure data contracts — no ML or business logic belongs here.
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, EmailStr, Field
 
@@ -59,7 +59,7 @@ class AnalysisResultCreate(BaseModel):
     metadata_id: str
     is_deepfake: bool
     confidence_score: float
-    features_used: List[str]
+    features_used: list[str]
 
 
 class AnalysisResult(AnalysisResultCreate):
@@ -72,7 +72,7 @@ class AnalysisResult(AnalysisResultCreate):
 # ---------------------------------------------------------------------------
 class ResultDetailsCreate(BaseModel):
     analysis_id: str
-    feature_scores: Dict[str, float]
+    feature_scores: dict[str, float]
     model_version: str
     processing_time: float
 
@@ -90,10 +90,10 @@ class CompleteAnalysis(BaseModel):
     metadata_id: str
     is_deepfake: bool
     confidence_score: float
-    features_used: List[str]
+    features_used: list[str]
     analysis_timestamp: str
-    metadata: Optional[AudioMetadata] = None
-    details: Optional[ResultDetails] = None
+    metadata: AudioMetadata | None = None
+    details: ResultDetails | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -103,14 +103,14 @@ class PaginationMeta(BaseModel):
     """Cursor-based pagination metadata included in list responses."""
     per_page: int
     has_next: bool
-    next_cursor: Optional[str] = None
+    next_cursor: str | None = None
 
 
 class PaginatedAnalysisResponse(BaseModel):
     """Envelope for paginated analysis list with HATEOAS links."""
-    data: List[Dict[str, Any]]
+    data: list[dict[str, Any]]
     pagination: PaginationMeta
-    _links: Dict[str, Any] = Field(default_factory=dict, alias="_links")
+    _links: dict[str, Any] = Field(default_factory=dict, alias="_links")
 
     class Config:
         populate_by_name = True
@@ -121,4 +121,4 @@ class PaginatedAnalysisResponse(BaseModel):
 # ---------------------------------------------------------------------------
 class DeleteAnalysesRequest(BaseModel):
     """Typed request body for bulk deletion."""
-    ids: List[str]
+    ids: list[str]
