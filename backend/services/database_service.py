@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import datetime
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from firebase_admin import firestore
 from google.cloud.firestore_v1.base_query import FieldFilter
@@ -41,7 +41,9 @@ class DatabaseService:
     ) -> str:
         """Store metadata about an uploaded audio file and return its ID."""
         metadata_id = str(uuid.uuid4())
-        timestamp = upload_timestamp or datetime.datetime.now().isoformat()
+        timestamp = upload_timestamp or datetime.datetime.now(
+            datetime.timezone.utc,
+        ).isoformat()
 
         self.db.collection("audio_metadata").document(metadata_id).set(
             {
@@ -63,12 +65,14 @@ class DatabaseService:
         metadata_id: str,
         is_deepfake: bool,
         confidence_score: float,
-        features_used: List[str],
+        features_used: list[str],
         analysis_timestamp: str | None = None,
     ) -> str:
         """Store a deepfake analysis result and return its ID."""
         analysis_id = str(uuid.uuid4())
-        timestamp = analysis_timestamp or datetime.datetime.now().isoformat()
+        timestamp = analysis_timestamp or datetime.datetime.now(
+            datetime.timezone.utc,
+        ).isoformat()
 
         self.db.collection("analysis_results").document(analysis_id).set(
             {
@@ -85,7 +89,7 @@ class DatabaseService:
     def create_result_details(
         self,
         analysis_id: str,
-        feature_scores: Dict[str, float],
+        feature_scores: dict[str, float],
         model_version: str,
         processing_time: float,
     ) -> str:
@@ -99,7 +103,9 @@ class DatabaseService:
                 "feature_scores": feature_scores,
                 "model_version": model_version,
                 "processing_time": processing_time,
-                "created_at": datetime.datetime.now().isoformat(),
+                "created_at": datetime.datetime.now(
+                    datetime.timezone.utc,
+                ).isoformat(),
             }
         )
         return details_id
@@ -112,7 +118,7 @@ class DatabaseService:
         user_id: str,
         per_page: int = 20,
         after_cursor: str | None = None,
-    ) -> tuple[List[Dict[str, Any]], str | None]:
+    ) -> tuple[list[dict[str, Any]], str | None]:
         """Return paginated analyses for *user_id*.
 
         Returns:
@@ -168,7 +174,7 @@ class DatabaseService:
 
         return analyses, next_cursor
 
-    def get_analysis(self, analysis_id: str) -> Optional[Dict[str, Any]]:
+    def get_analysis(self, analysis_id: str) -> dict[str, Any] | None:
         """Return a single analysis with related metadata and details."""
         analysis_doc = (
             self.db.collection("analysis_results")
@@ -244,7 +250,7 @@ class DatabaseService:
             logger.error("Error deleting analysis %s: %s", analysis_id, exc)
             return False
 
-    def delete_multiple_analyses(self, analysis_ids: List[str]) -> Dict[str, bool]:
+    def delete_multiple_analyses(self, analysis_ids: list[str]) -> dict[str, bool]:
         """Delete several analyses and return a success map."""
         return {aid: self.delete_analysis(aid) for aid in analysis_ids}
 
@@ -257,7 +263,7 @@ class DatabaseService:
         {"name": "audio_clip_08.wav", "size": 567890,  "duration": 24.8, "sample_rate": 44100, "date": "2025-01-30", "is_fake": False, "confidence": 1.0},
     ]
 
-    def create_dummy_data(self, user_id: str) -> List[str]:
+    def create_dummy_data(self, user_id: str) -> list[str]:
         """Seed the database with sample analysis records for *user_id*."""
         analysis_ids: list[str] = []
         features = ["mfcc", "spectral_centroid", "zero_crossing_rate", "spectral_rolloff"]

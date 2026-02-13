@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../services/api";
 import { useAuth } from "../context/AuthContext";
@@ -69,8 +69,8 @@ function formatOneAnalysis(analysis) {
   };
 }
 
-// ── Delete‑confirmation modal ────────────────
-const DeleteModal = ({ count, isDeleting, onConfirm, onCancel }) => (
+// ── Delete‑confirmation modal (memoized) ─────
+const DeleteModal = React.memo(({ count, isDeleting, onConfirm, onCancel }) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
     <div className="bg-white rounded-lg shadow-lg p-8 max-w-sm w-full text-center animate-fade-in">
       <svg className="mx-auto mb-4 w-12 h-12 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -92,7 +92,8 @@ const DeleteModal = ({ count, isDeleting, onConfirm, onCancel }) => (
       </div>
     </div>
   </div>
-);
+));
+DeleteModal.displayName = "DeleteModal";
 
 // ── Spinner icon ─────────────────────────────
 const Spinner = ({ className = "h-4 w-4" }) => (
@@ -115,17 +116,20 @@ const HistoryPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  // ── Fetch data ─────────────────────────
+  // ── Stable token reference for deps ────
+  const token = user?.token;
+
+  // ── Fetch data (depends on token, not entire user object) ──
   useEffect(() => {
     const fetchAnalyses = async () => {
-      if (!user?.token) {
+      if (!token) {
         setError("You must be logged in to view history");
         setLoading(false);
         return;
       }
 
       try {
-        const response = await api.getUserAnalyses(user.token);
+        const response = await api.getUserAnalyses(token);
         const raw = response.analyses;
 
         if (Array.isArray(raw)) {
@@ -147,7 +151,7 @@ const HistoryPage = () => {
 
     fetchAnalyses();
     setSelectedItems([]);
-  }, [user]);
+  }, [token]);
 
   // ── Derived state ──────────────────────
   const filteredHistory = useMemo(
@@ -158,29 +162,29 @@ const HistoryPage = () => {
     [historyData, searchTerm],
   );
 
-  // ── Selection handlers ─────────────────
-  const handleItemSelect = (id) => {
+  // ── Selection handlers (memoized) ──────
+  const handleItemSelect = useCallback((id) => {
     setSelectedItems((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
     );
-  };
+  }, []);
 
-  const handleSelectAll = () => {
+  const handleSelectAll = useCallback(() => {
     setSelectedItems((prev) =>
       prev.length === filteredHistory.length ? [] : filteredHistory.map((i) => i.id),
     );
-  };
+  }, [filteredHistory]);
 
   // ── Delete flow ────────────────────────
-  const handleDeleteSelected = () => {
+  const handleDeleteSelected = useCallback(() => {
     if (selectedItems.length === 0) return;
     setShowDeleteModal(true);
-  };
+  }, [selectedItems.length]);
 
-  const confirmDelete = async () => {
+  const confirmDelete = useCallback(async () => {
     setIsDeleting(true);
     try {
-      await api.deleteAnalyses(selectedItems, user.token);
+      await api.deleteAnalyses(selectedItems, token);
       setHistoryData((prev) => prev.filter((i) => !selectedItems.includes(i.id)));
       setSelectedItems([]);
       setShowDeleteModal(false);
@@ -190,31 +194,37 @@ const HistoryPage = () => {
     } finally {
       setIsDeleting(false);
     }
-  };
+  }, [selectedItems, token]);
+
+  const cancelDelete = useCallback(() => {
+    setShowDeleteModal(false);
+  }, []);
 
   // ── Sort toggle ────────────────────────
-  const toggleDateSort = () => {
-    const dir = sortDirection === "desc" ? "asc" : "desc";
-    setSortDirection(dir);
-    setHistoryData((prev) => {
-      const sorted = [...prev].sort((a, b) => {
-        const tA = a.timestamp?.getTime() || 0;
-        const tB = b.timestamp?.getTime() || 0;
-        return dir === "desc" ? tB - tA : tA - tB;
+  const toggleDateSort = useCallback(() => {
+    setSortDirection((prev) => {
+      const dir = prev === "desc" ? "asc" : "desc";
+      setHistoryData((prevData) => {
+        const sorted = [...prevData].sort((a, b) => {
+          const tA = a.timestamp?.getTime() || 0;
+          const tB = b.timestamp?.getTime() || 0;
+          return dir === "desc" ? tB - tA : tA - tB;
+        });
+        return sorted;
       });
-      return sorted;
+      return dir;
     });
-  };
+  }, []);
 
-  // ── Navigation ─────────────────────────
-  const handleViewDetails = (item) => {
+  // ── Navigation (memoized) ─────────────
+  const handleViewDetails = useCallback((item) => {
     const id = item.id || item.analysis_id;
     if (id) {
       navigate(`/result/${id}`);
     } else {
       navigate("/detailed-analysis", { state: { analysisData: item } });
     }
-  };
+  }, [navigate]);
 
   // ── Render ─────────────────────────────
   return (
@@ -224,7 +234,7 @@ const HistoryPage = () => {
           count={selectedItems.length}
           isDeleting={isDeleting}
           onConfirm={confirmDelete}
-          onCancel={() => setShowDeleteModal(false)}
+          onCancel={cancelDelete}
         />
       )}
 

@@ -1,281 +1,269 @@
-import numpy as np
+"""
+Audio feature extraction using Wav2Vec2 and traditional methods.
+
+Provides a unified ``extract_features`` function that combines
+Wav2Vec2 embeddings with classical MFCC / spectral features, and
+a caching layer to avoid redundant model inference.
+"""
+
+import hashlib
+import json
+import time
+from pathlib import Path
+
 import librosa
+import numpy as np
 import torch
 import torchaudio
 from transformers import Wav2Vec2Processor, Wav2Vec2Model
-import os
-import hashlib
-import time
-import json
-from pathlib import Path
 
 from logger import get_logger
 
 logger = get_logger(__name__)
 
-# Initialize Wav2Vec2 model and processor (lazy loading)
+# Initialise Wav2Vec2 model and processor (lazy loading)
 _wav2vec2_model = None
 _wav2vec2_processor = None
 
 # Cache for Wav2Vec2 embeddings
-_wav2vec2_cache = {}
-_cache_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "cache")
-_cache_file = os.path.join(_cache_dir, "wav2vec2_cache.json")
-_max_cache_size = 100  # Maximum number of items in cache
+_wav2vec2_cache: dict = {}
+_cache_dir = Path(__file__).resolve().parent.parent / "cache"
+_cache_file = _cache_dir / "wav2vec2_cache.json"
+_max_cache_size = 100
+
 
 def _get_audio_hash(audio_path):
     """
-    Generate a hash for an audio file based on its content and metadata
-    
+    Generate a hash for an audio file based on its content and metadata.
+
     Args:
         audio_path: Path to the audio file
-        
+
     Returns:
         str: Hash value for the audio file
     """
     try:
-        file_stats = os.stat(audio_path)
-        # Use file size and modification time as part of the hash
+        file_stats = Path(audio_path).stat()
         metadata = f"{file_stats.st_size}_{file_stats.st_mtime}"
-        
-        # Hash the first 1MB of the file content for uniqueness
+
         with open(audio_path, "rb") as f:
             content = f.read(1024 * 1024)
             content_hash = hashlib.md5(content).hexdigest()
-        
-        # Combine metadata and content hash
+
         combined_hash = f"{metadata}_{content_hash}"
         return hashlib.md5(combined_hash.encode()).hexdigest()
-    except Exception as e:
-        logger.warning("Error generating audio hash: %s", e)
-        # Fallback to just the file path
+    except Exception as exc:
+        logger.warning("Error generating audio hash: %s", exc)
         return hashlib.md5(audio_path.encode()).hexdigest()
 
+
 def _load_cache():
-    """Load embedding cache from disk"""
+    """Load embedding cache from disk."""
     global _wav2vec2_cache
-    
-    if not os.path.exists(_cache_dir):
-        os.makedirs(_cache_dir, exist_ok=True)
-        
-    if os.path.exists(_cache_file):
+
+    _cache_dir.mkdir(parents=True, exist_ok=True)
+
+    if _cache_file.exists():
         try:
-            with open(_cache_file, 'r') as f:
+            with open(_cache_file) as f:
                 cache_data = json.load(f)
-                
-            # Convert lists back to numpy arrays
-            for key, value in cache_data.items():
-                if 'embedding' in value:
-                    value['embedding'] = np.array(value['embedding'])
+
+            for value in cache_data.values():
+                if "embedding" in value:
+                    value["embedding"] = np.array(value["embedding"])
             _wav2vec2_cache = cache_data
-        except Exception as e:
-            # Silent fail for cache loading issues
+        except Exception:
             _wav2vec2_cache = {}
     else:
         _wav2vec2_cache = {}
 
+
 def _save_cache():
-    """Save embedding cache to disk"""
+    """Save embedding cache to disk."""
     if not _wav2vec2_cache:
         return
-        
-    if not os.path.exists(_cache_dir):
-        os.makedirs(_cache_dir, exist_ok=True)
-    
+
+    _cache_dir.mkdir(parents=True, exist_ok=True)
+
     try:
-        # Convert numpy arrays to lists for JSON serialization
         cache_data = {}
         for key, value in _wav2vec2_cache.items():
             cache_data[key] = {
-                'timestamp': value['timestamp'],
-                'filename': value['filename']
+                "timestamp": value["timestamp"],
+                "filename": value["filename"],
             }
-            if 'embedding' in value:
-                cache_data[key]['embedding'] = value['embedding'].tolist()
-        
-        with open(_cache_file, 'w') as f:
+            if "embedding" in value:
+                cache_data[key]["embedding"] = value["embedding"].tolist()
+
+        with open(_cache_file, "w") as f:
             json.dump(cache_data, f)
     except Exception:
-        # Silent fail for cache saving issues
         pass
 
+
 def _trim_cache():
-    """Trim the cache to the maximum size by removing oldest entries"""
+    """Trim the cache to the maximum size by removing oldest entries."""
     global _wav2vec2_cache
-    
+
     if len(_wav2vec2_cache) <= _max_cache_size:
         return
-        
-    # Sort by timestamp (oldest first)
-    sorted_items = sorted(_wav2vec2_cache.items(), key=lambda x: x[1]['timestamp'])
-    
-    # Remove oldest items
+
+    sorted_items = sorted(
+        _wav2vec2_cache.items(), key=lambda x: x[1]["timestamp"],
+    )
     items_to_remove = len(_wav2vec2_cache) - _max_cache_size
     for i in range(items_to_remove):
         key, _ = sorted_items[i]
         del _wav2vec2_cache[key]
 
-# Load cache at module initialization
+
+# Load cache at module initialisation
 _load_cache()
 
+
 def _get_wav2vec2():
-    """
-    Lazy initialization of the Wav2Vec2 model and processor
-    """
+    """Lazy-initialise and return the Wav2Vec2 model and processor."""
     global _wav2vec2_model, _wav2vec2_processor
-    
+
     if _wav2vec2_model is None or _wav2vec2_processor is None:
-        # Initialize model - using facebook/wav2vec2-base
         model_name = "facebook/wav2vec2-base"
         logger.info("Loading Wav2Vec2 model: %s", model_name)
         _wav2vec2_processor = Wav2Vec2Processor.from_pretrained(model_name)
         _wav2vec2_model = Wav2Vec2Model.from_pretrained(model_name)
-        
-        # Set model to evaluation mode
         _wav2vec2_model.eval()
-        
-        # Enable gradient checkpointing if needed (fixes deprecation warning)
+
         if hasattr(_wav2vec2_model, "gradient_checkpointing_enable"):
             _wav2vec2_model.gradient_checkpointing_enable()
-    
+
     return _wav2vec2_model, _wav2vec2_processor
+
+
+# -----------------------------------------------------------------------
+# Traditional feature extraction (shared helper)
+# -----------------------------------------------------------------------
+def _extract_traditional_features(y, sr, n_mfcc=40):
+    """Extract MFCC and spectral features from a waveform.
+
+    Returns a 1-D numpy array of length ``n_mfcc * 2 + 3``.
+    """
+    mfccs = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=n_mfcc)
+    mfcc_mean = np.mean(mfccs, axis=1)
+    mfcc_var = np.var(mfccs, axis=1)
+    mfcc_features = np.concatenate((mfcc_mean, mfcc_var))
+
+    spectral_centroid = np.mean(
+        librosa.feature.spectral_centroid(y=y, sr=sr)[0],
+    )
+    spectral_rolloff = np.mean(
+        librosa.feature.spectral_rolloff(y=y, sr=sr)[0],
+    )
+    zcr = np.mean(librosa.feature.zero_crossing_rate(y)[0])
+
+    return np.concatenate(
+        (mfcc_features, [spectral_centroid, spectral_rolloff, zcr]),
+    )
+
 
 def extract_features(audio_path, sr=16000, n_mfcc=40, use_wav2vec2=True):
     """
-    Extract audio features from an audio file using Wav2Vec2 and traditional features
-    
+    Extract audio features from an audio file.
+
+    Combines Wav2Vec2 embeddings (when enabled) with traditional MFCC
+    and spectral features.
+
     Args:
         audio_path: Path to the audio file
-        sr: Sample rate (default: 16000 - Wav2Vec2 expected sample rate)
+        sr: Sample rate (default: 16000 — Wav2Vec2 expected sample rate)
         n_mfcc: Number of MFCC features to extract (default: 40)
         use_wav2vec2: Whether to use Wav2Vec2 features (default: True)
-        
+
     Returns:
         numpy.ndarray: Extracted features
     """
     try:
-        # Load the audio file
         y, orig_sr = librosa.load(audio_path, sr=None)
-        
-        # For Wav2Vec2, we need to resample to 16kHz
+
         if orig_sr != 16000:
             y_16k = librosa.resample(y, orig_sr=orig_sr, target_sr=16000)
         else:
             y_16k = y
-            
-        # Extract features using Wav2Vec2 if enabled
+
+        traditional = _extract_traditional_features(y, orig_sr, n_mfcc)
+
         if use_wav2vec2:
             wav2vec2_features = extract_wav2vec2_features(y_16k, audio_path)
-            
-            # For backup, also extract traditional features
-            # Extract MFCCs
-            mfccs = librosa.feature.mfcc(y=y, sr=orig_sr, n_mfcc=n_mfcc)
-            
-            # Calculate statistics for each MFCC coefficient
-            mfcc_mean = np.mean(mfccs, axis=1)
-            mfcc_var = np.var(mfccs, axis=1)
-            mfcc_features = np.concatenate((mfcc_mean, mfcc_var))
-            
-            # Extract additional features
-            spectral_centroid = np.mean(librosa.feature.spectral_centroid(y=y, sr=orig_sr)[0])
-            spectral_rolloff = np.mean(librosa.feature.spectral_rolloff(y=y, sr=orig_sr)[0])
-            zcr = np.mean(librosa.feature.zero_crossing_rate(y)[0])
-            
-            # Combine Wav2Vec2 features with traditional features
-            traditional_features = np.concatenate((mfcc_features, [spectral_centroid, spectral_rolloff, zcr]))
-            combined_features = np.concatenate((wav2vec2_features, traditional_features))
-            
-            return combined_features
-        else:
-            # Fall back to traditional feature extraction
-            # Extract MFCCs
-            mfccs = librosa.feature.mfcc(y=y, sr=orig_sr, n_mfcc=n_mfcc)
-            
-            # Calculate statistics for each MFCC coefficient
-            mfcc_mean = np.mean(mfccs, axis=1)
-            mfcc_var = np.var(mfccs, axis=1)
-            mfcc_features = np.concatenate((mfcc_mean, mfcc_var))
-            
-            # Extract additional features
-            spectral_centroid = np.mean(librosa.feature.spectral_centroid(y=y, sr=orig_sr)[0])
-            spectral_rolloff = np.mean(librosa.feature.spectral_rolloff(y=y, sr=orig_sr)[0])
-            zcr = np.mean(librosa.feature.zero_crossing_rate(y)[0])
-            
-            # Create feature vector
-            features = np.concatenate((mfcc_features, [spectral_centroid, spectral_rolloff, zcr]))
-            
-            return features
-        
-    except Exception as e:
-        logger.error("Error extracting features: %s", e)
-        # Return a zero vector as fallback - adjusted for potential Wav2Vec2 features
-        fallback_size = 768 + n_mfcc * 2 + 3 if use_wav2vec2 else n_mfcc * 2 + 3
+            return np.concatenate((wav2vec2_features, traditional))
+
+        return traditional
+
+    except Exception as exc:
+        logger.error("Error extracting features: %s", exc)
+        fallback_size = (
+            768 + n_mfcc * 2 + 3 if use_wav2vec2 else n_mfcc * 2 + 3
+        )
         return np.zeros(fallback_size)
 
-def extract_wav2vec2_features(waveform_or_path, audio_path=None, max_length=160000):
+
+def extract_wav2vec2_features(
+    waveform_or_path, audio_path=None, max_length=160000,
+):
     """
-    Extract features using the Wav2Vec2 model
-    
+    Extract features using the Wav2Vec2 model.
+
     Args:
-        waveform_or_path: Audio waveform (16kHz) or path to audio file
+        waveform_or_path: Audio waveform (16 kHz) or path to audio file
         audio_path: Path to the audio file (used for caching)
-        max_length: Maximum length of waveform in samples (default: 160000 = 10 seconds at 16kHz)
-        
+        max_length: Maximum waveform length in samples
+            (default: 160 000 = 10 s at 16 kHz)
+
     Returns:
         numpy.ndarray: Wav2Vec2 features
     """
     try:
-        # Get model and processor
         model, processor = _get_wav2vec2()
-        
-        # Check if input is a file path or waveform
+
         if isinstance(waveform_or_path, str):
-            # Load the audio file and resample to 16kHz
-            waveform, sr = librosa.load(waveform_or_path, sr=16000)
+            waveform, _sr = librosa.load(waveform_or_path, sr=16000)
         else:
             waveform = waveform_or_path
-        
-        # Generate hash for caching
+
         audio_hash = _get_audio_hash(audio_path) if audio_path else None
-        
-        # Check cache
+
         if audio_hash and audio_hash in _wav2vec2_cache:
             logger.debug("Using cached Wav2Vec2 embedding for %s", audio_path)
-            return _wav2vec2_cache[audio_hash]['embedding']
-        
-        # Truncate or pad the waveform if necessary
+            return _wav2vec2_cache[audio_hash]["embedding"]
+
         if len(waveform) > max_length:
             waveform = waveform[:max_length]
-        
-        # Convert to float32 tensor
+
         waveform_tensor = torch.tensor(waveform).float()
-        
-        # Prepare input for Wav2Vec2
-        inputs = processor(waveform_tensor, sampling_rate=16000, return_tensors="pt", padding=True)
-        
-        # Extract features without gradient calculation
+
+        inputs = processor(
+            waveform_tensor,
+            sampling_rate=16000,
+            return_tensors="pt",
+            padding=True,
+        )
+
         with torch.no_grad():
             outputs = model(**inputs)
-            
-        # Get the hidden states from the last layer
+
         hidden_states = outputs.last_hidden_state
-        
-        # Average across time dimension to get a fixed-size representation
-        wav2vec2_embeddings = torch.mean(hidden_states, dim=1).squeeze().numpy()
-        
-        # Cache the embedding
+        wav2vec2_embeddings = (
+            torch.mean(hidden_states, dim=1).squeeze().numpy()
+        )
+
         if audio_hash:
             _wav2vec2_cache[audio_hash] = {
-                'timestamp': time.time(),
-                'filename': audio_path,
-                'embedding': wav2vec2_embeddings
+                "timestamp": time.time(),
+                "filename": audio_path,
+                "embedding": wav2vec2_embeddings,
             }
             _trim_cache()
             _save_cache()
-        
+
         return wav2vec2_embeddings
-        
-    except Exception as e:
-        logger.error("Error extracting Wav2Vec2 features: %s", e)
-        # Return zero vector with the typical Wav2Vec2 embedding size
-        return np.zeros(768)  # Default size of Wav2Vec2 embeddings
+
+    except Exception as exc:
+        logger.error("Error extracting Wav2Vec2 features: %s", exc)
+        return np.zeros(768)

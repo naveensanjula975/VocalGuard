@@ -1,10 +1,14 @@
-import React from "react";
+import React, { useMemo } from "react";
 
-const ProgressIndicator = ({ progress, status }) => {
+const ProgressIndicator = React.memo(({ progress, status }) => {
   const radius = 40;
   const circumference = 2 * Math.PI * radius;
-  const progressOffset = circumference - (progress / 100) * circumference;
-  const roundedProgress = Math.round(progress);
+
+  // ── Memoize derived calculations ───────────
+  const { progressOffset, roundedProgress } = useMemo(() => ({
+    progressOffset: circumference - (progress / 100) * circumference,
+    roundedProgress: Math.round(progress),
+  }), [progress, circumference]);
 
   return (
     <div className="flex flex-col items-center justify-center">
@@ -51,6 +55,8 @@ const ProgressIndicator = ({ progress, status }) => {
       <p className="mt-4 text-sm font-medium text-gray-600" aria-live="polite">{status}</p>
     </div>
   );
-};
+});
+
+ProgressIndicator.displayName = "ProgressIndicator";
 
 export default ProgressIndicator;

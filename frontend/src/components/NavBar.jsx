@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import logo from "../assets/logo.png";
@@ -24,7 +24,6 @@ const Navbar = () => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const profileRef = useRef(null);
 
-  // Close profile dropdown on outside click
   // Close dropdowns on outside click or Escape
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -46,19 +45,32 @@ const Navbar = () => {
     };
   }, []);
 
-  const handleLogout = async () => {
+  // ── Memoized handlers ─────────────────────
+  const handleLogout = useCallback(async () => {
     try {
       await logout();
       navigate("/login");
     } catch (error) {
       console.error("Failed to logout:", error);
     }
-  };
+  }, [logout, navigate]);
 
-  // Build link list based on auth state
-  const navLinks = user
-    ? [...PUBLIC_LINKS, ...AUTH_ONLY_LINKS]
-    : [...PUBLIC_LINKS, { to: "/login", label: "Login" }];
+  const toggleMenu = useCallback(() => {
+    setIsMenuOpen((prev) => !prev);
+  }, []);
+
+  const toggleProfile = useCallback(() => {
+    setIsProfileOpen((prev) => !prev);
+  }, []);
+
+  // ── Memoize link list (avoids array re-creation) ──
+  const navLinks = useMemo(
+    () =>
+      user
+        ? [...PUBLIC_LINKS, ...AUTH_ONLY_LINKS]
+        : [...PUBLIC_LINKS, { to: "/login", label: "Login" }],
+    [user],
+  );
 
   return (
     <nav className="relative px-4 py-4 mt-5 bg-white sm:px-8" aria-label="Main navigation">
@@ -80,7 +92,7 @@ const Navbar = () => {
           {user && (
             <div className="relative" ref={profileRef}>
               <button
-                onClick={() => setIsProfileOpen(!isProfileOpen)}
+                onClick={toggleProfile}
                 aria-haspopup="true"
                 aria-expanded={isProfileOpen}
                 className="flex items-center gap-2 text-gray-700 transition-colors duration-200 hover:text-purple-600"
@@ -119,7 +131,7 @@ const Navbar = () => {
         {/* ── Mobile hamburger ──────────── */}
         <button
           className="p-2 transition-colors duration-200 rounded-lg md:hidden hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500"
-          onClick={() => setIsMenuOpen(!isMenuOpen)}
+          onClick={toggleMenu}
           aria-label="Toggle menu"
           aria-expanded={isMenuOpen}
         >
@@ -162,4 +174,4 @@ const Navbar = () => {
   );
 };
 
-export default Navbar;
+export default React.memo(Navbar);

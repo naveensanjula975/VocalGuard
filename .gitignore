@@ -108,7 +108,6 @@ backend/data/data/validation/
 # 5. Build & Deployment Artifacts
 # ------------------------------------------------------------
 build/
-Dockerfile
 docker-compose.override.yml
 
 # Firebase
