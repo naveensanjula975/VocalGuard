@@ -320,7 +320,12 @@ class TransformerDeepfakeDetector:
             with torch.no_grad():
                 logits, attention_weights = self.transformer_model(features)
 
-                probabilities = F.softmax(logits, dim=1)
+                # Confidence Calibration (Temperature Scaling)
+                # Soften probability distribution to prevent overconfident boundary predictions
+                temperature = 1.5
+                scaled_logits = logits / temperature
+
+                probabilities = F.softmax(scaled_logits, dim=1)
                 predictions = torch.argmax(probabilities, dim=1)
 
                 pred_idx = predictions[0].cpu().item()

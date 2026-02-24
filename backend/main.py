@@ -71,12 +71,14 @@ from routes.auth import router as auth_router            # noqa: E402
 from routes.analyses import router as analyses_router    # noqa: E402
 from routes.demo import router as demo_router            # noqa: E402
 from routes.debug import router as debug_router          # noqa: E402
+from routes.explain import router as explain_router      # noqa: E402
 
 v1 = APIRouter(prefix=API_V1_PREFIX)
 v1.include_router(auth_router)
 v1.include_router(analyses_router)
 v1.include_router(demo_router)
 v1.include_router(debug_router)
+v1.include_router(explain_router)    # POST /api/v1/explain
 
 app.include_router(v1)
 

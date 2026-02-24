@@ -84,7 +84,14 @@ class DeepfakeAudioDetector:
 
         with torch.no_grad():
             logits = self.model(**inputs).logits
-            probs = torch.nn.functional.softmax(logits, dim=1)
+            
+            # Confidence Calibration (Temperature Scaling)
+            # Models often produce overconfident probability distributions.
+            # Temperature T > 1 softens the distribution.
+            temperature = 1.5
+            scaled_logits = logits / temperature
+            probs = torch.nn.functional.softmax(scaled_logits, dim=1)
+            
             pred_idx = torch.argmax(probs, dim=1)[0].cpu().item()
             confidence = probs[0][pred_idx].cpu().item()
             all_probs = probs[0].cpu().numpy()
@@ -101,11 +108,6 @@ class DeepfakeAudioDetector:
             else (confidence > threshold),
         }
 
-
-@lru_cache(maxsize=1)
-def get_wav2vec2_detector() -> DeepfakeAudioDetector:
-    logger.info("Lazy-loading Wav2Vec2 detector into memory...")
-    return DeepfakeAudioDetector(str(MODEL_DIR))
 
 @lru_cache(maxsize=1)
 def get_wav2vec2_detector() -> DeepfakeAudioDetector:
@@ -224,11 +226,21 @@ def detect_deepfake(
     store_results: bool = True,
     filename: str | None = None,
     analysis_type: str = "advanced",
+    language: str = "auto",  # BCP-47 tag (e.g. 'en', 'es', 'fr') or 'auto'
 ) -> dict:
     """
     Detect deepfake using the Wav2Vec2 model.
 
-    Public signature and return shape are unchanged from the original.
+    Args:
+        audio_path:    Path to the audio file to analyse.
+        user_id:       Authenticated user ID (for persistence).
+        store_results: Whether to persist results to the database.
+        filename:      Original filename to display in results.
+        analysis_type: Model variant (advanced | standard | ensemble).
+        language:      BCP-47 language tag or 'auto' (default). The Wav2Vec2
+                       XLSR model is trained on 53 languages and generalises
+                       well across them; accuracy may vary for low-resource
+                       languages and heavy accents.
     """
     start = time.time()
     try:
@@ -257,9 +269,11 @@ def detect_deepfake(
                 "confidence": detection["confidence"],
                 "label": detection["prediction"],
                 "model_used": _resolve_model_name(analysis_type),
+                "model_version": MODEL_VERSION,
                 "processing_time": processing_time,
                 "probabilities": detection["probabilities"],
                 "filename": filename or os.path.basename(audio_path),
+                "language": language,  # Multi-language support: BCP-47 tag or 'auto'
                 "cache_hit": False,
             }
             # Cache the result before attaching DB IDs
@@ -359,6 +373,7 @@ def detect_deepfake_ensemble(
                         "confidence": ensemble_conf,
                         "is_fake": ensemble_pred,
                         "model_used": "wav2vec2_transformer_ensemble",
+                        "model_version": f"{MODEL_VERSION}_ensemble",
                         "wav2vec2_weight": ENSEMBLE_WAV2VEC2_WEIGHT,
                         "transformer_weight": ENSEMBLE_TRANSFORMER_WEIGHT,
                         "individual_confidences": {
