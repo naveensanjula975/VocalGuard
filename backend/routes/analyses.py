@@ -16,8 +16,14 @@ Query parameters on POST:
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, Request, BackgroundTasks
 from fastapi.responses import JSONResponse
+import uuid
+import os
+import tempfile
+import asyncio
+import json
+import urllib.request
 
 from config import (
     ANALYSIS_TYPE_TO_MODEL,
@@ -25,25 +31,98 @@ from config import (
     MAX_PAGE_SIZE,
     VALID_ANALYSIS_MODELS,
 )
-from dependencies import get_current_user, get_db, save_upload_to_temp
+from dependencies import get_current_user, get_db, save_upload_to_temp, validate_audio_file
 from logger import get_logger
 from core.detect_deepfake import detect_deepfake, detect_deepfake_ensemble
 from models.schemas import DeleteAnalysesRequest, PaginationMeta
 from services.database_service import DatabaseService
 from utils.links import analysis_links, collection_links
+from rate_limiter import limiter
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/analyses", tags=["analyses"])
+
+# ---------------------------------------------------------------------------
+# Background Job Status Tracking (In-Memory for Demo)
+# ---------------------------------------------------------------------------
+_JOBS: dict[str, dict] = {}
+
+def _run_analysis_job(job_id: str, tmp_path: str, model: str, include: str | None, user_id: str, filename: str, webhook_url: str | None = None):
+    """Execute analysis synchronously in a background thread and optionally send a webhook."""
+    logger.info("Starting background job %s", job_id)
+    try:
+        if model == "ensemble":
+            result = detect_deepfake_ensemble(
+                tmp_path, user_id=user_id, store_results=True, filename=filename, use_transformer=True
+            )
+            if include == "attention":
+                result["attention_analysis"] = result.get("detailed_results", {}).get("attention_analysis", {})
+        else:
+            result = detect_deepfake(
+                tmp_path, user_id=user_id, store_results=True, filename=filename, analysis_type=model
+            )
+
+        result["filename"] = filename
+        model_key = ANALYSIS_TYPE_TO_MODEL.get(model)
+        if model_key:
+            result.setdefault("model_used", model_key)
+        if "analysis_id" in result:
+            result["_links"] = analysis_links(result["analysis_id"])
+
+        _JOBS[job_id] = {"status": "completed", "result": result}
+        logger.info("Completed background job %s", job_id)
+
+        # -------------------------------------------------------------------
+        # Webhook Notification firing
+        # -------------------------------------------------------------------
+        if webhook_url:
+            try:
+                logger.info("Sending webhook notification for job %s to %s", job_id, webhook_url)
+                payload = json.dumps({"job_id": job_id, "status": "completed", "result": result}).encode("utf-8")
+                req = urllib.request.Request(
+                    webhook_url,
+                    data=payload,
+                    headers={"Content-Type": "application/json", "User-Agent": "VocalGuard-Webhook/1.0"}
+                )
+                with urllib.request.urlopen(req, timeout=10) as response:
+                    logger.info("Webhook success: %s", response.status)
+            except Exception as webhook_err:
+                logger.error("Failed to send webhook for job %s: %s", job_id, webhook_err)
+
+    except Exception as exc:
+        logger.exception("Job %s failed", job_id)
+        _JOBS[job_id] = {"status": "failed", "error": str(exc)}
+    finally:
+        try:
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+        except OSError:
+            pass
+
+# ═══════════════════════════════════════════════════════════════════════
+# GET /analyses/jobs/{job_id} — Poll Job Status
+# ═══════════════════════════════════════════════════════════════════════
+@router.get("/jobs/{job_id}")
+async def get_job_status(job_id: str, token_data: dict = Depends(get_current_user)):
+    """Poll for the status of an asynchronous background job."""
+    if job_id not in _JOBS:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return _JOBS[job_id]
 
 
 # ═══════════════════════════════════════════════════════════════════════
 # POST /analyses — Create (run detection, store result)
 # ═══════════════════════════════════════════════════════════════════════
 @router.post("", status_code=201)
+@limiter.limit("5/minute")
 async def create_analysis(
-    file: UploadFile = File(...),
+    request: Request,
+    background_tasks: BackgroundTasks,
+    file: UploadFile = Depends(validate_audio_file),
     model: str = Query("advanced", description="Detection model to use"),
     include: str | None = Query(None, description="Extra data: 'attention'"),
+    async_mode: bool = Query(False, description="Run in background and return job_id for polling"),
+    webhook_url: str | None = Query(None, description="Optional callback URL for async notification. Ignored if async_mode is false."),
     token_data: dict = Depends(get_current_user),
 ):
     """Run deepfake detection and store the result as a new analysis.
@@ -59,6 +138,23 @@ async def create_analysis(
         )
 
     user_id = token_data["uid"]
+    
+    if async_mode:
+        job_id = str(uuid.uuid4())
+        _JOBS[job_id] = {"status": "processing"}
+        
+        # Save temp file explicitly
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename or "")[1])
+        contents = await file.read()
+        tmp.write(contents)
+        tmp.close()
+        
+        background_tasks.add_task(
+            _run_analysis_job, job_id, tmp.name, model, include, user_id, file.filename, webhook_url
+        )
+        return {"job_id": job_id, "status": "processing", "_links": {"status": f"/api/v1/analyses/jobs/{job_id}"}}
+    
+    # Synchronous flow
 
     try:
         async with save_upload_to_temp(file) as tmp_path:

@@ -11,6 +11,9 @@ from __future__ import annotations
 import os
 import time
 
+import hashlib
+from functools import lru_cache
+from cachetools import LRUCache
 import librosa
 import numpy as np
 import torch
@@ -98,6 +101,31 @@ class DeepfakeAudioDetector:
             else (confidence > threshold),
         }
 
+
+@lru_cache(maxsize=1)
+def get_wav2vec2_detector() -> DeepfakeAudioDetector:
+    logger.info("Lazy-loading Wav2Vec2 detector into memory...")
+    return DeepfakeAudioDetector(str(MODEL_DIR))
+
+@lru_cache(maxsize=1)
+def get_wav2vec2_detector() -> DeepfakeAudioDetector:
+    logger.info("Lazy-loading Wav2Vec2 detector into memory...")
+    return DeepfakeAudioDetector(str(MODEL_DIR))
+
+@lru_cache(maxsize=1)
+def get_transformer_detector() -> TransformerDeepfakeDetector:
+    logger.info("Lazy-loading Transformer detector into memory...")
+    return TransformerDeepfakeDetector(str(MODEL_DIR))
+
+# Result cache (cache size 100 items ≈ avoid memory leak)
+_RESULT_CACHE = LRUCache(maxsize=100)
+
+def _get_file_hash(path: str) -> str:
+    hasher = hashlib.sha256()
+    with open(path, "rb") as f:
+        while chunk := f.read(8192):
+            hasher.update(chunk)
+    return hasher.hexdigest()
 
 # ---------------------------------------------------------------------------
 # Private helpers
@@ -204,20 +232,38 @@ def detect_deepfake(
     """
     start = time.time()
     try:
-        detector = DeepfakeAudioDetector(str(MODEL_DIR))
-        detection = detector.detect(audio_path)
-        processing_time = (time.time() - start) * 1000
+        file_hash = _get_file_hash(audio_path)
+        cache_key = f"{file_hash}::{analysis_type}"
 
-        result: dict = {
-            "probability": detection["confidence"],
-            "is_fake": detection["is_fake"],
-            "confidence": detection["confidence"],
-            "label": detection["prediction"],
-            "model_used": _resolve_model_name(analysis_type),
-            "processing_time": processing_time,
-            "probabilities": detection["probabilities"],
-            "filename": filename or os.path.basename(audio_path),
-        }
+        if cache_key in _RESULT_CACHE:
+            logger.info("Cache hit for audio %s (type=%s)", file_hash, analysis_type)
+            result = _RESULT_CACHE[cache_key].copy()
+            processing_time = (time.time() - start) * 1000
+            result["processing_time"] = processing_time
+            result["cache_hit"] = True
+            result["filename"] = filename or os.path.basename(audio_path)
+            # Make sure ID tags from previous cached items are wiped
+            result.pop("metadata_id", None)
+            result.pop("analysis_id", None)
+            result.pop("details_id", None)
+        else:
+            detector = get_wav2vec2_detector()
+            detection = detector.detect(audio_path)
+            processing_time = (time.time() - start) * 1000
+
+            result = {
+                "probability": detection["confidence"],
+                "is_fake": detection["is_fake"],
+                "confidence": detection["confidence"],
+                "label": detection["prediction"],
+                "model_used": _resolve_model_name(analysis_type),
+                "processing_time": processing_time,
+                "probabilities": detection["probabilities"],
+                "filename": filename or os.path.basename(audio_path),
+                "cache_hit": False,
+            }
+            # Cache the result before attaching DB IDs
+            _RESULT_CACHE[cache_key] = result.copy()
 
         if store_results and user_id:
             try:
@@ -256,59 +302,80 @@ def detect_deepfake_ensemble(
     """
     start = time.time()
     try:
-        # --- Wav2Vec2 leg ---
-        wav2vec2_result = detect_deepfake(
-            audio_path, user_id=None, store_results=False, filename=filename
-        )
+        file_hash = _get_file_hash(audio_path)
+        cache_key = f"{file_hash}::ensemble::{use_transformer}"
 
-        results: dict = {
-            "wav2vec2_result": wav2vec2_result,
-            "transformer_result": None,
-            "ensemble_result": None,
-            "attention_analysis": None,
-        }
+        if cache_key in _RESULT_CACHE:
+            logger.info("Cache hit for audio %s (ensemble)", file_hash)
+            final = _RESULT_CACHE[cache_key].copy()
+            processing_time = (time.time() - start) * 1000
+            final["processing_time"] = processing_time
+            final["cache_hit"] = True
+            final["filename"] = filename or os.path.basename(audio_path)
+            # Strip previous IDs
+            final.pop("metadata_id", None)
+            final.pop("analysis_id", None)
+            final.pop("details_id", None)
+            results = final.get("detailed_results", {})
+        else:
+            # --- Wav2Vec2 leg ---
+            wav2vec2_result = detect_deepfake(
+                audio_path, user_id=None, store_results=False, filename=filename
+            )
 
-        # --- Transformer leg ---
-        if use_transformer:
-            transformer = TransformerDeepfakeDetector(str(MODEL_DIR))
-            transformer_result = transformer.detect(audio_path)
-            results["transformer_result"] = transformer_result
-            results["attention_analysis"] = transformer.get_attention_analysis(audio_path)
+            results: dict = {
+                "wav2vec2_result": wav2vec2_result,
+                "transformer_result": None,
+                "ensemble_result": None,
+                "attention_analysis": None,
+            }
 
-            # Ensemble only if both models succeeded
-            if not wav2vec2_result.get("error") and not transformer_result.get("error"):
-                w2v_conf = wav2vec2_result.get("confidence", 0.0)
-                tf_conf = transformer_result.get("confidence", 0.0)
-                ensemble_conf = (
-                    w2v_conf * ENSEMBLE_WAV2VEC2_WEIGHT
-                    + tf_conf * ENSEMBLE_TRANSFORMER_WEIGHT
-                )
+            # --- Transformer leg ---
+            if use_transformer:
+                transformer = get_transformer_detector()
+                transformer_result = transformer.detect(audio_path)
+                results["transformer_result"] = transformer_result
+                results["attention_analysis"] = transformer.get_attention_analysis(audio_path)
 
-                w2v_fake = wav2vec2_result.get("is_fake", False)
-                tf_fake = transformer_result.get("is_fake", False)
+                # Ensemble only if both models succeeded
+                if not wav2vec2_result.get("error") and not transformer_result.get("error"):
+                    w2v_conf = wav2vec2_result.get("confidence", 0.0)
+                    tf_conf = transformer_result.get("confidence", 0.0)
+                    ensemble_conf = (
+                        w2v_conf * ENSEMBLE_WAV2VEC2_WEIGHT
+                        + tf_conf * ENSEMBLE_TRANSFORMER_WEIGHT
+                    )
 
-                if w2v_fake == tf_fake:
-                    ensemble_pred = w2v_fake
-                else:
-                    ensemble_pred = ensemble_conf > 0.5
+                    w2v_fake = wav2vec2_result.get("is_fake", False)
+                    tf_fake = transformer_result.get("is_fake", False)
 
-                results["ensemble_result"] = {
-                    "prediction": "fake" if ensemble_pred else "real",
-                    "confidence": ensemble_conf,
-                    "is_fake": ensemble_pred,
-                    "model_used": "wav2vec2_transformer_ensemble",
-                    "wav2vec2_weight": ENSEMBLE_WAV2VEC2_WEIGHT,
-                    "transformer_weight": ENSEMBLE_TRANSFORMER_WEIGHT,
-                    "individual_confidences": {
-                        "wav2vec2": w2v_conf,
-                        "transformer": tf_conf,
-                    },
-                }
+                    if w2v_fake == tf_fake:
+                        ensemble_pred = w2v_fake
+                    else:
+                        ensemble_pred = ensemble_conf > 0.5
 
-        processing_time = (time.time() - start) * 1000
-        final = results.get("ensemble_result") or wav2vec2_result
-        final["processing_time"] = processing_time
-        final["filename"] = filename or os.path.basename(audio_path)
+                    results["ensemble_result"] = {
+                        "prediction": "fake" if ensemble_pred else "real",
+                        "confidence": ensemble_conf,
+                        "is_fake": ensemble_pred,
+                        "model_used": "wav2vec2_transformer_ensemble",
+                        "wav2vec2_weight": ENSEMBLE_WAV2VEC2_WEIGHT,
+                        "transformer_weight": ENSEMBLE_TRANSFORMER_WEIGHT,
+                        "individual_confidences": {
+                            "wav2vec2": w2v_conf,
+                            "transformer": tf_conf,
+                        },
+                    }
+
+            processing_time = (time.time() - start) * 1000
+            final = results.get("ensemble_result") or wav2vec2_result
+            final["processing_time"] = processing_time
+            final["filename"] = filename or os.path.basename(audio_path)
+            final["detailed_results"] = results
+            final["cache_hit"] = False
+            
+            # Cache it
+            _RESULT_CACHE[cache_key] = final.copy()
 
         # --- Persist ---
         if store_results and user_id and not final.get("error"):

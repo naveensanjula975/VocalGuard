@@ -19,6 +19,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from config import ALLOWED_ORIGINS, API_V1_PREFIX, FIREBASE_WEB_API_KEY
 from exceptions import register_exception_handlers
 from services.firebase_config import initialize_firebase
+from asgi_correlation_id import CorrelationIdMiddleware
+from rate_limiter import limiter
 
 # ---------------------------------------------------------------------------
 # Validate critical config (fail-fast)
@@ -39,8 +41,11 @@ app = FastAPI(
 )
 
 # ---------------------------------------------------------------------------
-# Middleware
+# Middleware & State
 # ---------------------------------------------------------------------------
+app.state.limiter = limiter
+
+app.add_middleware(CorrelationIdMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
@@ -94,6 +99,12 @@ async def root():
 @app.get("/health", tags=["health"])
 async def health():
     return {"status": "ok"}
+
+
+@app.get("/ready", tags=["health"])
+async def ready():
+    """Liveness probe for container orchestration."""
+    return {"status": "ready"}
 
 
 # ---------------------------------------------------------------------------
