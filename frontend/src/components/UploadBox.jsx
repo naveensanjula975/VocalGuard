@@ -2,6 +2,7 @@ import React, { useState, useRef, useCallback, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../services/api";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import ProgressIndicator from "./ProgressIndicator";
 
 // ── Constants ────────────────────────────────
@@ -11,9 +12,13 @@ const VALID_TYPES = [
   "audio/mpeg",
   "audio/wav",
   "audio/x-wav",
-  "audio/wave",
+  "audio/x-m4a",
+  "audio/mp4",
+  "video/mp4",
+  "audio/ogg",
+  "audio/aac"
 ];
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
 
 const STATUS_MESSAGES = [
   { threshold: 30, message: "Preparing file..." },
@@ -57,11 +62,13 @@ const UploadBox = () => {
   const validateFile = useCallback((f) => {
     if (!f) return false;
     if (!VALID_TYPES.includes(f.type)) {
-      setError("Please upload only MP3, WAV or FLAC files");
+      toast.error("Please upload only MP3, WAV, FLAC, M4A, OGG or AAC files");
+      setError("Please upload only MP3, WAV, FLAC, M4A, OGG or AAC files");
       return false;
     }
     if (f.size > MAX_FILE_SIZE) {
-      setError("File size should be less than 10 MB");
+      toast.error("File size should be less than 20 MB");
+      setError("File size should be less than 20 MB");
       return false;
     }
     return true;
@@ -142,10 +149,12 @@ const UploadBox = () => {
   const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
     if (!file) {
+      toast.error("Please select a file to process");
       setError("Please select a file");
       return;
     }
     if (!user?.token) {
+      toast.error("You must be logged in to analyze audio");
       setError("You must be logged in to analyze audio");
       return;
     }
@@ -169,6 +178,7 @@ const UploadBox = () => {
       stopFakeProgress();
       setUploadProgress(100);
       setUploadStatus("Complete!");
+      toast.success("Analysis complete!");
 
       // Merge local file info with API response
       const enhancedResult = {
@@ -193,15 +203,26 @@ const UploadBox = () => {
     } catch (err) {
       console.error("Error analyzing audio:", err);
       stopFakeProgress();
+      setIsUploading(false);
 
       // Map common HTTP errors to user-friendly messages
       const msg = err.message || "";
-      if (msg.includes("401")) setError("Authentication error. Please login again.");
-      else if (msg.includes("413")) setError("File too large. Please choose a smaller audio file.");
-      else if (msg.toLowerCase().includes("network")) setError("Network error. Please check your connection and try again.");
-      else setError(msg || "Failed to analyze audio");
-
-      setIsUploading(false);
+      if (msg.includes("401")) {
+        setError("Authentication error. Please login again.");
+        toast.error("Authentication expired. Please log in.");
+      }
+      else if (msg.includes("413")) {
+        setError("File too large. Please choose a smaller audio file.");
+        toast.error("File is too large.");
+      }
+      else if (msg.toLowerCase().includes("network")) {
+        setError("Network error. Please check your connection and try again.");
+        toast.error("Network disconnected.");
+      }
+      else {
+        setError(msg || "Failed to analyze audio");
+        toast.error(msg || "Failed to analyze audio");
+      }
     }
   }, [file, user?.token, useAdvancedAnalysis, startFakeProgress, stopFakeProgress, navigate]);
 

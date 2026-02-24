@@ -5,9 +5,9 @@ import logo from "../assets/logo.png";
 
 // ── Shared link style tokens ─────────────────
 const LINK_BASE =
-  "text-base font-medium text-gray-700 transition-colors duration-200 hover:text-purple-600";
+  "text-base font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200 hover:text-purple-600 dark:hover:text-purple-400";
 const MOBILE_LINK =
-  "px-4 py-2 text-base font-medium text-gray-700 transition-colors duration-200 rounded-lg hover:text-purple-600 hover:bg-gray-50";
+  "px-4 py-2 text-base font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200 rounded-lg hover:text-purple-600 dark:hover:text-purple-400 hover:bg-gray-50 dark:hover:bg-gray-800";
 
 // ── Nav‑link data (avoids repeating JSX) ─────
 const PUBLIC_LINKS = [
@@ -22,6 +22,7 @@ const Navbar = () => {
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
   const profileRef = useRef(null);
 
   // Close dropdowns on outside click or Escape
@@ -45,6 +46,11 @@ const Navbar = () => {
     };
   }, []);
 
+  // Sync initial dark mode state
+  useEffect(() => {
+    setIsDarkMode(document.documentElement.classList.contains("dark"));
+  }, []);
+
   // ── Memoized handlers ─────────────────────
   const handleLogout = useCallback(async () => {
     try {
@@ -63,6 +69,12 @@ const Navbar = () => {
     setIsProfileOpen((prev) => !prev);
   }, []);
 
+  const toggleDarkMode = useCallback(() => {
+    const isDark = document.documentElement.classList.toggle("dark");
+    setIsDarkMode(isDark);
+    localStorage.setItem("theme", isDark ? "dark" : "light");
+  }, []);
+
   // ── Memoize link list (avoids array re-creation) ──
   const navLinks = useMemo(
     () =>
@@ -73,7 +85,7 @@ const Navbar = () => {
   );
 
   return (
-    <nav className="relative px-4 py-4 mt-5 bg-white sm:px-8" aria-label="Main navigation">
+    <nav className="relative px-4 py-4 mt-5 bg-white dark:bg-gray-900 transition-colors duration-200 sm:px-8" aria-label="Main navigation">
       <div className="flex items-center justify-between mx-auto max-w-7xl">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2 no-underline">
@@ -87,6 +99,15 @@ const Navbar = () => {
               {link.label}
             </Link>
           ))}
+
+          {/* Dark mode toggle */}
+          <button
+            onClick={toggleDarkMode}
+            className="p-2 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+            aria-label="Toggle dark mode"
+          >
+            {isDarkMode ? "☀️" : "🌙"}
+          </button>
 
           {/* Profile dropdown (logged-in only) */}
           {user && (
@@ -115,8 +136,8 @@ const Navbar = () => {
               </button>
 
               {isProfileOpen && (
-                <div className="absolute right-0 z-50 w-48 py-1 mt-2 bg-white rounded-lg shadow-lg" role="menu" aria-label="User menu">
-                  <Link to="/profile" role="menuitem" className="block px-4 py-2 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-600">
+                <div className="absolute right-0 z-50 w-48 py-1 mt-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-100 dark:border-gray-700" role="menu" aria-label="User menu">
+                  <Link to="/profile" role="menuitem" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-purple-50 dark:hover:bg-gray-700 hover:text-purple-600 dark:hover:text-purple-400">
                     Profile Settings
                   </Link>
                   <button onClick={handleLogout} role="menuitem" className="block w-full px-4 py-2 text-sm text-left text-red-600 hover:bg-red-50">

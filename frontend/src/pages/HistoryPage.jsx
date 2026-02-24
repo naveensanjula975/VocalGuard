@@ -280,8 +280,35 @@ const HistoryPage = () => {
 
       {/* Content area */}
       {loading ? (
-        <div className="flex justify-center items-center h-64" role="status" aria-label="Loading history">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-700" />
+        <div className="bg-white rounded-lg shadow overflow-hidden" role="status" aria-label="Loading history">
+          <div className="overflow-x-auto">
+            <table className="min-w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="w-10 px-3 py-3"></th>
+                  <th className="px-4 py-3"><div className="skeleton h-4 w-12 rounded"></div></th>
+                  <th className="px-4 py-3"><div className="skeleton h-4 w-20 rounded"></div></th>
+                  <th className="px-4 py-3"><div className="skeleton h-4 w-16 rounded"></div></th>
+                  <th className="px-4 py-3"><div className="skeleton h-4 w-12 rounded"></div></th>
+                  <th className="px-4 py-3"><div className="skeleton h-4 w-14 rounded"></div></th>
+                  <th className="px-4 py-3"></th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {[1, 2, 3, 4, 5].map((idx) => (
+                  <tr key={idx}>
+                    <td className="px-3 py-4"><div className="skeleton h-4 w-4 rounded"></div></td>
+                    <td className="px-4 py-4"><div className="skeleton h-4 w-32 rounded"></div></td>
+                    <td className="px-4 py-4"><div className="skeleton h-4 w-48 rounded"></div></td>
+                    <td className="px-4 py-4"><div className="skeleton h-8 w-24 rounded"></div></td>
+                    <td className="px-4 py-4"><div className="skeleton h-4 w-12 rounded"></div></td>
+                    <td className="px-4 py-4"><div className="skeleton h-4 w-10 rounded"></div></td>
+                    <td className="px-4 py-4 text-right"><div className="skeleton h-4 w-20 rounded inline-block"></div></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       ) : error ? (
         <div className="bg-red-50 p-4 rounded-lg text-center text-red-500" role="alert">

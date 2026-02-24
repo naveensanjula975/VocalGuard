@@ -17,7 +17,7 @@
   }
 
   body {
-    @apply font-['Poppins'] bg-white text-gray-900 min-h-screen leading-relaxed;
+    @apply font-['Poppins'] bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen leading-relaxed transition-colors duration-200;
   }
 
   #root {
@@ -33,15 +33,15 @@
 
   /* ── Auth page shared styles ─────────────── */
   .login-page {
-    @apply flex justify-center items-center min-h-screen bg-gray-50 p-5;
+    @apply flex justify-center items-center min-h-screen bg-gray-50 dark:bg-gray-900 p-5 transition-colors duration-200;
   }
 
   .login-container {
-    @apply bg-white p-8 rounded-xl shadow-lg w-full max-w-md text-center;
+    @apply bg-white dark:bg-gray-800 p-8 rounded-xl shadow-lg w-full max-w-md text-center transition-colors duration-200 border border-transparent dark:border-gray-700;
   }
 
   .login-container h2 {
-    @apply text-2xl font-semibold mb-6;
+    @apply text-2xl font-semibold mb-6 dark:text-white;
   }
 
   .login-container form {
@@ -49,11 +49,11 @@
   }
 
   .login-container label {
-    @apply block text-sm font-medium text-gray-700;
+    @apply block text-sm font-medium text-gray-700 dark:text-gray-300;
   }
 
   .login-container input {
-    @apply w-full px-4 py-2 mt-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent;
+    @apply w-full px-4 py-2 mt-1 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-colors duration-200;
   }
 
   .login-container button[type="submit"] {
@@ -70,16 +70,16 @@
 
   /* Shared auth feedback banners */
   .auth-error {
-    @apply p-3 bg-red-50 text-red-800 rounded-lg text-sm;
+    @apply p-3 bg-red-50 dark:bg-red-900/40 text-red-800 dark:text-red-300 rounded-lg text-sm border border-transparent dark:border-red-800;
   }
 
   .auth-success {
-    @apply p-3 bg-green-50 text-green-800 rounded-lg text-sm;
+    @apply p-3 bg-green-50 dark:bg-green-900/40 text-green-800 dark:text-green-300 rounded-lg text-sm border border-transparent dark:border-green-800;
   }
 
   /* Footer links (forgot password, signup, back to login) */
   .auth-footer {
-    @apply mt-6 text-center text-sm text-gray-600;
+    @apply mt-6 text-center text-sm text-gray-600 dark:text-gray-400;
   }
 
   .auth-footer a {
@@ -134,4 +134,34 @@
 
 .fade-in {
   animation: fadeIn 0.5s ease-out forwards;
+}
+
+@keyframes skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.skeleton {
+  @apply relative overflow-hidden bg-gray-200 dark:bg-gray-700;
+}
+
+.skeleton::after {
+  content: "";
+  @apply absolute inset-0;
+  transform: translateX(-100%);
+  background-image: linear-gradient(90deg,
+      transparent 0,
+      rgba(255, 255, 255, 0.4) 20%,
+      rgba(255, 255, 255, 0.6) 60%,
+      transparent);
+  animation: skeleton-shimmer 2s infinite;
+}
+
+.dark .skeleton::after {
+  background-image: linear-gradient(90deg,
+      transparent 0,
+      rgba(255, 255, 255, 0.05) 20%,
+      rgba(255, 255, 255, 0.1) 60%,
+      transparent);
 }

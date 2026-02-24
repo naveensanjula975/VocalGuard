@@ -10,8 +10,9 @@ import { AuthProvider } from "./context/AuthContext";
 import ErrorBoundary from "./components/ErrorBoundary";
 import Navbar from "./components/Navbar";
 import ProtectedRoute from "./components/ProtectedRoute";
+import { Toaster } from 'react-hot-toast';
 
-// ── Lazy‑loaded pages ────────────────────────
+// ── Dark Mode Logic ────────────────────────
 const HomePage = lazy(() => import("./pages/HomePage"));
 const LoginPage = lazy(() => import("./pages/LoginPage"));
 const SignupPage = lazy(() => import("./pages/SignupPage"));
@@ -26,6 +27,33 @@ const UploadBox = lazy(() => import("./components/UploadBox"));
 // ── Auth pages that hide the navbar ──────────
 const AUTH_PATHS = ["/login", "/forgot-password", "/signup"];
 
+// ── Dark / Light Theme hook ──────────────────
+const useTheme = () => {
+  React.useEffect(() => {
+    // Check local storage or system preference
+    const isDark = localStorage.getItem("theme") === "dark" ||
+      (!("theme" in localStorage) && window.matchMedia("(prefers-color-scheme: dark)").matches);
+
+    if (isDark) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+
+    // Listen for system changes
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const handleChange = (e) => {
+      if (!("theme" in localStorage)) {
+        if (e.matches) document.documentElement.classList.add("dark");
+        else document.documentElement.classList.remove("dark");
+      }
+    };
+
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, []);
+};
+
 // ── Route‑level loading spinner ──────────────
 const PageSpinner = () => (
   <div className="flex items-center justify-center min-h-[60vh]">
@@ -39,11 +67,12 @@ const PageSpinner = () => (
 const AppContent = () => {
   const location = useLocation();
   const isAuthPage = AUTH_PATHS.includes(location.pathname);
+  useTheme();
 
   return (
-    <div className="flex flex-col w-full min-h-screen">
+    <div className="flex flex-col w-full min-h-screen dark:bg-gray-900 transition-colors duration-200">
       {!isAuthPage && <Navbar />}
-      <main className="flex-1 w-full min-h-[calc(100vh-64px)] bg-gray-50">
+      <main className="flex-1 w-full min-h-[calc(100vh-64px)] bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
         <ErrorBoundary>
           <Suspense fallback={<PageSpinner />}>
             <Routes>
@@ -93,6 +122,23 @@ const AppContent = () => {
 const App = () => {
   return (
     <AuthProvider>
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: '#363636',
+            color: '#fff',
+            fontFamily: 'system-ui, -apple-system, sans-serif'
+          },
+          success: {
+            duration: 3000,
+            theme: {
+              primary: '#4aed88',
+            },
+          },
+        }}
+      />
       <Router>
         <AppContent />
       </Router>
