@@ -187,3 +187,4 @@ temp/
 *.pid.lock
 .eslintcache
 docs/
+*.md

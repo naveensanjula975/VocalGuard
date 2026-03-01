@@ -96,6 +96,10 @@ export const api = {
             body: { analysis_ids: analysisIds },
         }),
 
+    // ─── Explainability ─────────────────────
+    explainAudio: (formData, token) =>
+        request('/api/v1/explain', { method: 'POST', token, formData }),
+
     // ─── Debug / Demo ──────────────────────
     generateDummyData: (token) =>
         request('/generate-dummy-data', { method: 'POST', token }),

@@ -15,7 +15,10 @@ const PUBLIC_LINKS = [
   { to: "/about", label: "About us" },
 ];
 
-const AUTH_ONLY_LINKS = [{ to: "/history", label: "History" }];
+const AUTH_ONLY_LINKS = [
+  { to: "/history", label: "History" },
+  { to: "/explain", label: "Explain" },
+];
 
 const Navbar = () => {
   const { user, logout } = useAuth();

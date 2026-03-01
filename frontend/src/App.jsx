@@ -22,6 +22,7 @@ const ResultPage = lazy(() => import("./pages/ResultPage"));
 const HistoryPage = lazy(() => import("./pages/HistoryPage"));
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
 const DetailedAnalysisPage = lazy(() => import("./pages/DetailedAnalysisPage"));
+const ExplainPage = lazy(() => import("./pages/ExplainPage"));
 const UploadBox = lazy(() => import("./components/UploadBox"));
 
 // ── Auth pages that hide the navbar ──────────
@@ -108,6 +109,14 @@ const AppContent = () => {
               <Route path="/detailed-analysis" element={<DetailedAnalysisPage />} />
               <Route path="/detailed-analysis/:id" element={<DetailedAnalysisPage />} />
               <Route path="/analysis/:id" element={<DetailedAnalysisPage />} />
+              <Route
+                path="/explain"
+                element={
+                  <ProtectedRoute>
+                    <ExplainPage />
+                  </ProtectedRoute>
+                }
+              />
 
               {/* Catch-all */}
               <Route path="*" element={<Navigate to="/" replace />} />
