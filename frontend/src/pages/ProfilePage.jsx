@@ -20,8 +20,6 @@ const TABS = [
 
 const THEME_OPTIONS = [
   { value: "light", label: "Light" },
-  { value: "dark", label: "Dark" },
-  { value: "system", label: "System" },
 ];
 
 const ANALYSIS_MODE_OPTIONS = [
