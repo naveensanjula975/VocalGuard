@@ -136,6 +136,28 @@ def _get_wav2vec2():
     
     return _wav2vec2_model, _wav2vec2_processor
 
+
+def _extract_traditional_features(y, sr, n_mfcc=40):
+    """
+    Extract MFCC and spectral features from a waveform.
+
+    Args:
+        y: Audio waveform as a numpy float32 array
+        sr: Sample rate of the waveform
+        n_mfcc: Number of MFCC coefficients (default: 40)
+
+    Returns:
+        numpy.ndarray: Feature vector of shape (n_mfcc * 2 + 3,)
+            [MFCC means | MFCC variances | centroid | rolloff | ZCR]
+    """
+    mfccs = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=n_mfcc)
+    mfcc_features = np.concatenate((np.mean(mfccs, axis=1), np.var(mfccs, axis=1)))
+    spectral_centroid = np.mean(librosa.feature.spectral_centroid(y=y, sr=sr)[0])
+    spectral_rolloff = np.mean(librosa.feature.spectral_rolloff(y=y, sr=sr)[0])
+    zcr = np.mean(librosa.feature.zero_crossing_rate(y)[0])
+    return np.concatenate((mfcc_features, [spectral_centroid, spectral_rolloff, zcr]))
+
+
 def extract_features(audio_path, sr=16000, n_mfcc=40, use_wav2vec2=True):
     """
     Extract audio features from an audio file using Wav2Vec2 and traditional features
@@ -150,61 +172,17 @@ def extract_features(audio_path, sr=16000, n_mfcc=40, use_wav2vec2=True):
         numpy.ndarray: Extracted features
     """
     try:
-        # Load the audio file
         y, orig_sr = librosa.load(audio_path, sr=None)
-        
-        # For Wav2Vec2, we need to resample to 16kHz
-        if orig_sr != 16000:
-            y_16k = librosa.resample(y, orig_sr=orig_sr, target_sr=16000)
-        else:
-            y_16k = y
-            
-        # Extract features using Wav2Vec2 if enabled
+
         if use_wav2vec2:
+            y_16k = librosa.resample(y, orig_sr=orig_sr, target_sr=16000) if orig_sr != 16000 else y
             wav2vec2_features = extract_wav2vec2_features(y_16k, audio_path)
-            
-            # For backup, also extract traditional features
-            # Extract MFCCs
-            mfccs = librosa.feature.mfcc(y=y, sr=orig_sr, n_mfcc=n_mfcc)
-            
-            # Calculate statistics for each MFCC coefficient
-            mfcc_mean = np.mean(mfccs, axis=1)
-            mfcc_var = np.var(mfccs, axis=1)
-            mfcc_features = np.concatenate((mfcc_mean, mfcc_var))
-            
-            # Extract additional features
-            spectral_centroid = np.mean(librosa.feature.spectral_centroid(y=y, sr=orig_sr)[0])
-            spectral_rolloff = np.mean(librosa.feature.spectral_rolloff(y=y, sr=orig_sr)[0])
-            zcr = np.mean(librosa.feature.zero_crossing_rate(y)[0])
-            
-            # Combine Wav2Vec2 features with traditional features
-            traditional_features = np.concatenate((mfcc_features, [spectral_centroid, spectral_rolloff, zcr]))
-            combined_features = np.concatenate((wav2vec2_features, traditional_features))
-            
-            return combined_features
+            return np.concatenate((wav2vec2_features, _extract_traditional_features(y, orig_sr, n_mfcc)))
         else:
-            # Fall back to traditional feature extraction
-            # Extract MFCCs
-            mfccs = librosa.feature.mfcc(y=y, sr=orig_sr, n_mfcc=n_mfcc)
-            
-            # Calculate statistics for each MFCC coefficient
-            mfcc_mean = np.mean(mfccs, axis=1)
-            mfcc_var = np.var(mfccs, axis=1)
-            mfcc_features = np.concatenate((mfcc_mean, mfcc_var))
-            
-            # Extract additional features
-            spectral_centroid = np.mean(librosa.feature.spectral_centroid(y=y, sr=orig_sr)[0])
-            spectral_rolloff = np.mean(librosa.feature.spectral_rolloff(y=y, sr=orig_sr)[0])
-            zcr = np.mean(librosa.feature.zero_crossing_rate(y)[0])
-            
-            # Create feature vector
-            features = np.concatenate((mfcc_features, [spectral_centroid, spectral_rolloff, zcr]))
-            
-            return features
-        
+            return _extract_traditional_features(y, orig_sr, n_mfcc)
+
     except Exception as e:
         print(f"Error extracting features: {e}")
-        # Return a zero vector as fallback - adjusted for potential Wav2Vec2 features
         fallback_size = 768 + n_mfcc * 2 + 3 if use_wav2vec2 else n_mfcc * 2 + 3
         return np.zeros(fallback_size)
 
