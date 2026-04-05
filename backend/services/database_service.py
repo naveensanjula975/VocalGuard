@@ -1,7 +1,6 @@
 import firebase_admin
 from firebase_admin import firestore
 import uuid
-import json
 import datetime
 from typing import Dict, List, Any, Optional
 
@@ -129,10 +128,6 @@ class DatabaseService:
         """
         # First get metadata records for the user
         metadata_query = self.db.collection('audio_metadata').where('user_id', '==', user_id).stream()
-        
-        if not metadata_query:
-            return []
-            
         analyses = []
         
         # For each metadata, get the associated analysis
