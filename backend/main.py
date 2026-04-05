@@ -1,13 +1,11 @@
 import os
 import sys
-import json
 import tempfile
 import requests
 from pathlib import Path
-from typing import List
 from dotenv import load_dotenv
 
-from fastapi import FastAPI, File, UploadFile, Depends, HTTPException, Form, Body
+from fastapi import FastAPI, File, UploadFile, Depends, HTTPException, Body
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
@@ -19,16 +17,13 @@ sys.path.insert(0, str(current_dir))
 # Import Firebase configuration and services
 from services.firebase_config import initialize_firebase
 from services.database_service import DatabaseService
-from firebase_admin import auth, firestore
+from firebase_admin import auth
 
 # Import deepfake detection functionality
 from core.detect_deepfake import detect_deepfake
 
 # Import data models
-from models.models import (
-    UserSignUp, UserLogin, AudioMetadata, AnalysisResult, 
-    CompleteAnalysis, ResultDetails
-)
+from models.models import UserSignUp, UserLogin
 
 # Initialize the FastAPI app
 app = FastAPI()
@@ -107,7 +102,6 @@ async def detect_deepfake_endpoint(
             f.write(contents)
               # Extract audio info
         filename = file.filename
-        file_size = len(contents)
           # Process the file with our deepfake detection logic and store results
         result = detect_deepfake(temp_file.name, user_id=user_id, store_results=True, filename=filename)
         
@@ -144,7 +138,6 @@ async def detect_deepfake_advanced_endpoint(
             f.write(contents)
               # Extract audio info
         filename = file.filename
-        file_size = len(contents)
           # Process the file with our deepfake detection logic with Wav2Vec2 and store results
         result = detect_deepfake(temp_file.name, user_id=user_id, store_results=True, filename=filename)
           # Add filename and model info to result
