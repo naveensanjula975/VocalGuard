@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000';
 
 export const api = {
     signup: async (userData) => {
@@ -201,26 +201,6 @@ export const api = {
             if (!response.ok) {
                 const error = await response.json();
                 throw new Error(error.detail || 'Failed to delete analyses');
-            }
-
-            return response.json();
-        } catch (error) {
-            throw new Error(error.message || 'Network error');
-        }
-    },
-
-    deleteAnalysis: async (analysisId, token) => {
-        try {
-            const response = await fetch(`${API_BASE_URL}/analyses/${analysisId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                },
-            });
-
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.detail || 'Failed to delete analysis');
             }
 
             return response.json();
