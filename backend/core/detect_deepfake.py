@@ -1,5 +1,6 @@
 import os
 import sys
+import threading
 import torch
 import torchaudio
 import numpy as np
@@ -62,7 +63,7 @@ class DeepfakeAudioDetector:
 
             if waveform.shape[0] > 1:
                 waveform = torch.mean(waveform, dim=0)
-            waveform = waveform.numpy()
+            waveform = waveform.numpy().astype(np.float32)
             if orig_sr != 16000:
                 waveform = librosa.resample(waveform, orig_sr=orig_sr, target_sr=16000)
 
@@ -117,13 +118,16 @@ class DeepfakeAudioDetector:
 # Module-level singleton — Wav2Vec2 weights are expensive to load.
 # _detector is None until the first request, then reused for all subsequent ones.
 _detector = None
+_detector_lock = threading.Lock()
 
 
 def _get_detector():
     """Return the shared DeepfakeAudioDetector, loading it on first call."""
     global _detector
     if _detector is None:
-        _detector = DeepfakeAudioDetector(MODEL_DIR)
+        with _detector_lock:
+            if _detector is None:
+                _detector = DeepfakeAudioDetector(MODEL_DIR)
     return _detector
 
 
