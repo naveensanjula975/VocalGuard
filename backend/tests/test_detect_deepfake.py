@@ -72,3 +72,40 @@ def test_detector_reused_across_calls_singleton():
     assert MockCls.call_count == 1, (
         f"DeepfakeAudioDetector constructed {MockCls.call_count} time(s); expected 1 (singleton)."
     )
+
+
+# ── Task 7 tests ────────────────────────────────────────────────────────────
+
+def test_detect_deepfake_result_has_required_fields():
+    """
+    detect_deepfake() must return a dict containing at minimum:
+    probability, is_fake, confidence, label, model_used,
+    processing_time, probabilities, filename.
+    After the double-load refactor, sample_rate and duration
+    come from detect() result, not a second librosa.load().
+    """
+    dd = _reload_dd()
+
+    mock_instance = MagicMock()
+    mock_instance.detect.return_value = {
+        "confidence": 0.85,
+        "is_fake": True,
+        "prediction": "fake",
+        "probabilities": {"real": 0.15, "fake": 0.85},
+        "sample_rate": 44100,
+        "duration": 3.5,
+    }
+
+    with patch.object(dd, "_get_detector", return_value=mock_instance), \
+         patch("builtins.open", MagicMock(return_value=MagicMock(
+             __enter__=MagicMock(return_value=MagicMock(read=MagicMock(return_value=b""))),
+             __exit__=MagicMock(return_value=False)
+         ))):
+        result = dd.detect_deepfake("/tmp/test.wav", store_results=False, filename="test.wav")
+
+    required = {
+        "probability", "is_fake", "confidence", "label",
+        "model_used", "processing_time", "probabilities", "filename",
+    }
+    missing = required - result.keys()
+    assert not missing, f"Result missing required keys: {missing}"

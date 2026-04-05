@@ -42,46 +42,32 @@ class DeepfakeAudioDetector:
     
     def preprocess_audio(self, audio_path):
         """
-        Preprocess audio file to match model requirements
-        
-        Args:
-            audio_path (str): Path to the audio file
-        
+        Preprocess audio file to match model requirements.
+
         Returns:
-            torch.Tensor: Processed audio input tensor
+            tuple: (inputs dict, orig_sr int, duration float)
         """
-        # Load audio with librosa (handles more formats)
         try:
-            # Option 1: Using librosa
-            waveform, sample_rate = librosa.load(audio_path, sr=16000)  # 16kHz is common for wav2vec2
-            
-            # Convert to float32 if not already
+            waveform, orig_sr = librosa.load(audio_path, sr=None)
+            duration = len(waveform) / orig_sr
+
+            if orig_sr != 16000:
+                waveform = librosa.resample(waveform, orig_sr=orig_sr, target_sr=16000)
             waveform = waveform.astype(np.float32)
-            
+
         except Exception as e:
             print(f"Librosa loading failed: {e}, trying torchaudio...")
-            # Option 2: Using torchaudio as fallback
-            waveform, sample_rate = torchaudio.load(audio_path)
-            
-            # Convert to mono if stereo
+            waveform, orig_sr = torchaudio.load(audio_path)
+            duration = waveform.shape[-1] / orig_sr
+
             if waveform.shape[0] > 1:
                 waveform = torch.mean(waveform, dim=0)
-            
-            # Convert to numpy for feature extractor
             waveform = waveform.numpy()
-            
-            # Resample if needed
-            if sample_rate != 16000:
-                waveform = librosa.resample(waveform, orig_sr=sample_rate, target_sr=16000)
-        
-        # Process through feature extractor
-        inputs = self.feature_extractor(
-            waveform, 
-            sampling_rate=16000, 
-            return_tensors="pt"
-        )
-        
-        return inputs
+            if orig_sr != 16000:
+                waveform = librosa.resample(waveform, orig_sr=orig_sr, target_sr=16000)
+
+        inputs = self.feature_extractor(waveform, sampling_rate=16000, return_tensors="pt")
+        return inputs, int(orig_sr), float(duration)
     
     def detect(self, audio_path, threshold=0.5):
         """
@@ -95,7 +81,7 @@ class DeepfakeAudioDetector:
             dict: Detection results including prediction, confidence scores, and label
         """
         # Preprocess audio
-        inputs = self.preprocess_audio(audio_path)
+        inputs, orig_sr, duration = self.preprocess_audio(audio_path)
         
         # Move inputs to device
         inputs = {key: val.to(self.device) for key, val in inputs.items()}
@@ -120,9 +106,11 @@ class DeepfakeAudioDetector:
             "confidence": confidence,
             "label_index": pred_idx,
             "probabilities": {self.id2label[i]: float(prob) for i, prob in enumerate(all_probs)},
-            "is_fake": pred_idx == 1 if "fake" in self.id2label.values() else (confidence > threshold)
+            "is_fake": pred_idx == 1 if "fake" in self.id2label.values() else (confidence > threshold),
+            "sample_rate": orig_sr,
+            "duration": duration,
         }
-        
+
         return result
 
 
@@ -182,15 +170,8 @@ def detect_deepfake(audio_path, user_id=None, store_results=True, filename=None)
                 with open(audio_path, 'rb') as f:
                     file_size = len(f.read())
                 
-                # Get audio duration and sample rate
-                try:
-                    audio_data, sample_rate = librosa.load(audio_path, sr=None)
-                    duration = librosa.get_duration(y=audio_data, sr=sample_rate)
-                except Exception as e:
-                    print(f"Error getting audio metadata: {e}")
-                    # Fallback values
-                    duration = 0
-                    sample_rate = 16000
+                sample_rate = detection_result.get("sample_rate", 16000)
+                duration = detection_result.get("duration", 0.0)
                 
                 # Use provided filename or extract from path
                 if not filename:
