@@ -152,9 +152,6 @@ async def detect_deepfake_advanced_endpoint(
             content={"error": f"Failed to process audio with Wav2Vec2: {str(e)}"}
         )
     finally:
-        # Clean up the temporary file
-        temp_file.close()
-        os.unlink(temp_file.name)
         temp_file.close()
         os.unlink(temp_file.name)
 
