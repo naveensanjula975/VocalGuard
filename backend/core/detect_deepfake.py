@@ -5,7 +5,6 @@ import torchaudio
 import numpy as np
 import librosa
 import time
-import soundfile as sf
 import traceback
 from pathlib import Path
 from transformers import Wav2Vec2FeatureExtractor, AutoModelForAudioClassification
@@ -14,7 +13,6 @@ from transformers import Wav2Vec2FeatureExtractor, AutoModelForAudioClassificati
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # Updated relative imports
-from models.models import DeepFakeDetector
 from services.database_service import DatabaseService
 
 # Model version for tracking
@@ -126,17 +124,20 @@ class DeepfakeAudioDetector:
         }
         
         return result
-def load_model(model_path=None):
-    """
-    Load the pre-trained deepfake detection model
-    """
-    model = DeepFakeDetector()
-    
-    if model_path and os.path.exists(model_path):
-        model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
-    
-    model.eval()
-    return model
+
+
+# Module-level singleton — Wav2Vec2 weights are expensive to load.
+# _detector is None until the first request, then reused for all subsequent ones.
+_detector = None
+
+
+def _get_detector():
+    """Return the shared DeepfakeAudioDetector, loading it on first call."""
+    global _detector
+    if _detector is None:
+        _detector = DeepfakeAudioDetector(MODEL_DIR)
+    return _detector
+
 
 def detect_deepfake(audio_path, user_id=None, store_results=True, filename=None):
     """
@@ -153,8 +154,8 @@ def detect_deepfake(audio_path, user_id=None, store_results=True, filename=None)
     """
     start_time = time.time()
     try:
-        # Initialize the detector with the model path
-        detector = DeepfakeAudioDetector(MODEL_DIR)
+        # Get (or lazily create) the shared detector singleton
+        detector = _get_detector()
         
         # Detect if audio is fake
         detection_result = detector.detect(audio_path)
