@@ -52,28 +52,34 @@
   border-color: rgba(0, 0, 0, 0.09);
 }
 
-/* ── Logo ───────────────────────────────────────────── */
+/* ── Brand wordmark ──────────────────────────────────── */
 .nb-logo {
   display: flex;
   align-items: center;
   flex-shrink: 0;
   text-decoration: none;
-  padding: 0 6px 0 8px;
-  /* Keep logo from distorting pill */
+  padding: 0 8px 0 10px;
   height: 100%;
 }
 
-.nb-logo-img {
-  height: 36px;
-  width: auto;
-  max-width: 160px;
-  object-fit: contain;
-  object-position: left center;
-  display: block;
-  /* ✨ Key trick: white logo background vanishes on white/near-white */
-  mix-blend-mode: multiply;
-  /* Slight saturation boost so the navy/blue mark pops */
-  filter: saturate(1.15);
+.nb-wordmark {
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  user-select: none;
+}
+
+.nb-wordmark-vocal {
+  color: var(--ink);
+}
+
+.nb-wordmark-guard {
+  background: var(--gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 /* ── Center nav links ───────────────────────────────── */
@@ -438,7 +444,7 @@
 }
 
 @media (max-width: 480px) {
-  .nb-header { padding: 10px 12px 0; }
-  .nb-bar    { height: 52px; }
-  .nb-logo-img { height: 30px; max-width: 130px; }
+  .nb-header   { padding: 10px 12px 0; }
+  .nb-bar      { height: 52px; }
+  .nb-wordmark { font-size: 17px; }
 }

@@ -195,23 +195,23 @@ const HomePage = () => {
 
           {/* Right — Detection card */}
           <div style={{ position: "relative" }}>
-            {/* Ambient blobs */}
+            {/* Soft ambient glows — light palette */}
             <div style={{
               position: "absolute",
-              top: "-40px", left: "-40px",
-              width: 320, height: 320,
+              top: "-60px", left: "-60px",
+              width: 340, height: 340,
               borderRadius: "50%",
-              background: "radial-gradient(circle, rgba(124,58,237,0.1) 0%, transparent 70%)",
-              filter: "blur(40px)",
+              background: "radial-gradient(circle, rgba(124,58,237,0.07) 0%, transparent 70%)",
+              filter: "blur(50px)",
               pointerEvents: "none",
             }} />
             <div style={{
               position: "absolute",
-              bottom: "-40px", right: "-40px",
-              width: 280, height: 280,
+              bottom: "-60px", right: "-60px",
+              width: 300, height: 300,
               borderRadius: "50%",
-              background: "radial-gradient(circle, rgba(219,39,119,0.08) 0%, transparent 70%)",
-              filter: "blur(40px)",
+              background: "radial-gradient(circle, rgba(219,39,119,0.05) 0%, transparent 70%)",
+              filter: "blur(50px)",
               pointerEvents: "none",
             }} />
             <DetectionCard />

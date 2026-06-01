@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import logo from "../assets/logo.jpg";
 import "../styles/design-tokens.css";
 import "./Navbar.css";
 
@@ -65,9 +64,11 @@ const Navbar = () => {
     <header className={`nb-header${scrolled ? " nb-header--scrolled" : ""}${hidden ? " nb-header--hidden" : ""}`}>
       <nav className="nb-bar" role="navigation" aria-label="Main navigation">
 
-        {/* ── Logo ── */}
+        {/* ── Brand wordmark ── */}
         <Link to="/" className="nb-logo" aria-label="VocalGuard home">
-          <img src={logo} alt="VocalGuard" className="nb-logo-img" />
+          <span className="nb-wordmark">
+            <span className="nb-wordmark-vocal">Vocal</span><span className="nb-wordmark-guard">Guard</span>
+          </span>
         </Link>
 
         {/* ── Center links (desktop) ── */}
