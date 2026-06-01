@@ -1,15 +1,23 @@
 // src/main.jsx
-import React from "react";
+import React, { useState } from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
+import LoadingScreen from "./components/LoadingScreen";
 import "./index.css";
-import "./i18n"; // Import i18n configuration
-import ErrorBoundary from "./components/ErrorBoundary";
+
+const Root = () => {
+  const [loading, setLoading] = useState(true);
+
+  return (
+    <>
+      {loading && <LoadingScreen onComplete={() => setLoading(false)} />}
+      <App />
+    </>
+  );
+};
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <ErrorBoundary>
-      <App />
-    </ErrorBoundary>
+    <Root />
   </React.StrictMode>
 );

@@ -1,113 +1,21 @@
-/* ─────────────────────────────────────────────
-   VocalGuard — Global Styles
-   Uses Tailwind CSS v4 via @tailwindcss/vite plugin.
-   ───────────────────────────────────────────── */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 @import "tailwindcss";
 
-/* ── Base layer ────────────────────────────── */
 @layer base {
-
-  *,
-  *::before,
-  *::after {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-  }
-
   body {
-    @apply font-['Poppins'] bg-white text-gray-900 min-h-screen leading-relaxed;
-  }
-
-  #root {
-    @apply min-h-screen flex flex-col;
+    @apply font-['Poppins'] bg-white text-gray-900 m-0 min-h-screen;
   }
 }
 
-/* ── Component layer ───────────────────────── */
 @layer components {
   .container {
     @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
   }
-
-  /* ── Auth page shared styles ─────────────── */
-  .login-page {
-    @apply flex justify-center items-center min-h-screen bg-gray-50 p-5;
-  }
-
-  .login-container {
-    @apply bg-white p-8 rounded-xl shadow-lg w-full max-w-md text-center border border-transparent;
-  }
-
-  .login-container h2 {
-    @apply text-2xl font-semibold mb-6;
-  }
-
-  .login-container form {
-    @apply flex flex-col gap-4 text-left;
-  }
-
-  .login-container label {
-    @apply block text-sm font-medium text-gray-700;
-  }
-
-  .login-container input {
-    @apply w-full px-4 py-2 mt-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white text-gray-900 placeholder-gray-400 transition-colors duration-200;
-  }
-
-  .login-container button[type="submit"] {
-    @apply mt-2 px-6 py-3 w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
-  }
-
-  .header {
-    @apply text-left mb-4;
-  }
-
-  .welcome-text {
-    @apply text-sm text-gray-500 mb-1;
-  }
-
-  .auth-error {
-    @apply p-3 bg-red-50 text-red-800 rounded-lg text-sm border border-transparent;
-  }
-
-  .auth-success {
-    @apply p-3 bg-green-50 text-green-800 rounded-lg text-sm border border-transparent;
-  }
-
-  /* Footer links (forgot password, signup, back to login) */
-  .auth-footer {
-    @apply mt-6 text-center text-sm text-gray-600;
-  }
-
-  .auth-footer a {
-    @apply text-purple-600 font-medium hover:text-purple-700;
-  }
-
-  /* Legacy classes kept for LoginForm compatibility */
-  .forgot-password {
-    @apply mt-4 text-sm;
-  }
-
-  .forgot-password a {
-    @apply text-purple-600 hover:text-purple-700;
-  }
-
-  .signup-container {
-    @apply mt-6 pt-6 border-t border-gray-200;
-  }
-
-  .signup-container p {
-    @apply text-sm text-gray-600;
-  }
-
-  .signup-container a {
-    @apply text-purple-600 font-semibold hover:text-purple-700;
-  }
 }
 
-/* ── Utility layer ─────────────────────────── */
 @layer utilities {
   .app {
     @apply min-h-screen flex flex-col w-full;
@@ -118,42 +26,59 @@
   }
 }
 
-/* ── Animations ────────────────────────────── */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* Login Page Styles */
+.login-page {
+  @apply flex justify-center items-center min-h-screen bg-gray-50 p-5;
 }
 
-.fade-in {
-  animation: fadeIn 0.5s ease-out forwards;
+.login-container {
+  @apply bg-white p-8 rounded-xl shadow-lg w-full max-w-md text-center;
 }
 
-@keyframes skeleton-shimmer {
-  100% {
-    transform: translateX(100%);
-  }
+.header {
+  @apply text-left mb-4;
 }
 
-.skeleton {
-  @apply relative overflow-hidden bg-gray-200;
+.welcome-text {
+  @apply text-sm text-gray-500 mb-1;
 }
 
-.skeleton::after {
-  content: "";
-  @apply absolute inset-0;
-  transform: translateX(-100%);
-  background-image: linear-gradient(90deg,
-      transparent 0,
-      rgba(255, 255, 255, 0.4) 20%,
-      rgba(255, 255, 255, 0.6) 60%,
-      transparent);
-  animation: skeleton-shimmer 2s infinite;
+.login-container h2 {
+  @apply text-2xl font-semibold mb-6;
 }
 
+.login-container form {
+  @apply flex flex-col text-left;
+}
+
+.login-container label {
+  @apply text-sm font-medium text-gray-700 mt-4;
+}
+
+.login-container input {
+  @apply w-full px-4 py-2 mt-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent;
+}
+
+.login-container button {
+  @apply mt-6 px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition-all duration-200;
+}
+
+.forgot-password {
+  @apply mt-4 text-sm;
+}
+
+.forgot-password a {
+  @apply text-purple-600 hover:text-purple-700;
+}
+
+.signup-container {
+  @apply mt-6 pt-6 border-t border-gray-200;
+}
+
+.signup-container p {
+  @apply text-sm text-gray-600;
+}
+
+.signup-container a {
+  @apply text-purple-600 font-semibold hover:text-purple-700;
+}
