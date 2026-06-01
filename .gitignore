@@ -29,6 +29,7 @@ backend/services/__pycache__/
 
 __pycache__/
 *.pyc
+*.bat
 *.pyo
 *.pyd
 /docs
