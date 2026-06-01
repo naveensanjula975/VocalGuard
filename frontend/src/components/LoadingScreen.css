@@ -1,0 +1,246 @@
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap');
+
+/* ════════════════════════════════════════════════════════
+   Splash / first-load screen  — clean light design
+   ════════════════════════════════════════════════════════ */
+
+/* ── Root ───────────────────────────────────────────── */
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #fafafa;
+  overflow: hidden;
+}
+
+/* Enter — fade + scale up gently */
+.splash--enter {
+  animation: splashEnter 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes splashEnter {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Exit — whole screen scales up and fades out */
+.splash--exit {
+  animation: splashExit 0.65s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+@keyframes splashExit {
+  0%   { opacity: 1;   transform: scale(1);    filter: blur(0px);   }
+  60%  { opacity: 0.6; transform: scale(1.04); filter: blur(2px);   }
+  100% { opacity: 0;   transform: scale(1.08); filter: blur(8px);   }
+}
+
+/* ── Noise texture ──────────────────────────────────── */
+.splash-noise {
+  position: absolute;
+  inset: 0;
+  /* Subtle grain — CSS-only noise via SVG data URI */
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  background-size: 200px 200px;
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+/* ── Soft bloom ─────────────────────────────────────── */
+.splash-bloom {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -55%);
+  width: 560px;
+  height: 560px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(124, 58, 237, 0.07) 0%,
+    rgba(219, 39, 119, 0.04) 45%,
+    transparent 70%
+  );
+  pointer-events: none;
+  animation: splashBloom 3.5s ease-in-out infinite;
+}
+@keyframes splashBloom {
+  0%, 100% { transform: translate(-50%, -55%) scale(1);    opacity: 0.8; }
+  50%       { transform: translate(-50%, -55%) scale(1.12); opacity: 1;   }
+}
+
+/* ── Center card ────────────────────────────────────── */
+.splash-card {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  /* Card reveal */
+  animation: cardReveal 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
+}
+@keyframes cardReveal {
+  from { opacity: 0; transform: translateY(20px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)    scale(1);    }
+}
+
+/* ── Ring + logo container ──────────────────────────── */
+.splash-ring-wrap {
+  position: relative;
+  width: 130px;
+  height: 130px;
+}
+
+.splash-ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  /* Gentle continuous rotation for the ring */
+  animation: ringRotate 12s linear infinite;
+}
+@keyframes ringRotate {
+  /* Very subtle drift — just enough to feel alive */
+  0%   { transform: rotate(0deg);   }
+  100% { transform: rotate(360deg); }
+}
+
+/* Tip dot pulse */
+.splash-tip-dot {
+  animation: tipPulse 1s ease-in-out infinite;
+}
+@keyframes tipPulse {
+  0%, 100% { r: 4;   opacity: 1;   }
+  50%       { r: 5.5; opacity: 0.6; }
+}
+
+/* Logo centered inside ring */
+.splash-logo-wrap {
+  position: absolute;
+  inset: 12px; /* inset from ring edge */
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+
+.splash-logo {
+  width: 80%;
+  height: 80%;
+  object-fit: contain;
+  object-position: center;
+  /* Eliminate white bg — logo blends into the white circle */
+  mix-blend-mode: multiply;
+  filter: saturate(1.2);
+  /* Scale in after wrap appears */
+  animation: logoScale 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.25s both;
+}
+@keyframes logoScale {
+  from { transform: scale(0.7); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+
+/* ── Brand name ─────────────────────────────────────── */
+.splash-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  animation: cardReveal 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
+}
+
+.splash-brand-name {
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  /* Gradient text */
+  background: linear-gradient(115deg, #09090f 0%, #374151 50%, #7c3aed 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.splash-brand-tag {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(124, 58, 237, 0.5);
+}
+
+/* ── Progress foot ──────────────────────────────────── */
+.splash-foot {
+  width: 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: cardReveal 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both;
+}
+
+/* Thin progress bar */
+.splash-bar-track {
+  height: 3px;
+  background: rgba(124, 58, 237, 0.10);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.splash-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #7c3aed, #db2777);
+  box-shadow: 0 0 8px rgba(124, 58, 237, 0.5);
+  transition: width 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Step + percentage row */
+.splash-foot-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.splash-step {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #6b7280;
+  /* Slide in on each message change */
+  animation: stepSlide 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes stepSlide {
+  from { opacity: 0; transform: translateY(5px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+.splash-pct {
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, #7c3aed, #db2777);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  min-width: 36px;
+  text-align: right;
+}
+
+/* ── Bottom byline ──────────────────────────────────── */
+.splash-byline {
+  position: absolute;
+  bottom: 24px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  color: rgba(0, 0, 0, 0.18);
+  animation: cardReveal 0.6s ease 0.5s both;
+}
