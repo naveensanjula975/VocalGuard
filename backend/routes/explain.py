@@ -11,8 +11,6 @@ This is read-only — results are computed on-the-fly from the stored audio
 or re-run from a cached file path.
 """
 
-from __future__ import annotations
-
 import os
 import tempfile
 from pathlib import Path

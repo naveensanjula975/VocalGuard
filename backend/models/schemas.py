@@ -122,7 +122,7 @@ class PaginatedAnalysisResponse(BaseModel):
     """Envelope for paginated analysis list with HATEOAS links."""
     data: list[dict[str, Any]]
     pagination: PaginationMeta
-    _links: dict[str, Any] = Field(default_factory=dict, alias="_links")
+    links: dict[str, Any] = Field(default_factory=dict, alias="_links")
 
     class Config:
         populate_by_name = True
