@@ -187,3 +187,7 @@ temp/
 *.pid.lock
 .eslintcache
 docs/
+*.md
+*.bat
+.vscode/
+.obsidian/

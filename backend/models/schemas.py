@@ -9,7 +9,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, ConfigDict
 
 
 # ---------------------------------------------------------------------------
@@ -26,14 +26,26 @@ class AnalysisModel(str, Enum):
 # Auth
 # ---------------------------------------------------------------------------
 class UserSignUp(BaseModel):
-    email: EmailStr
-    password: str
-    username: str
+    email: EmailStr = Field(..., description="A valid email address for the user")
+    password: str = Field(..., min_length=8, description="A strong password of at least 8 characters")
+    username: str = Field(..., min_length=3, max_length=50, description="Display name for the user")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [{"email": "user@example.com", "password": "SecurePassword123!", "username": "audio_expert"}]
+        }
+    )
 
 
 class UserLogin(BaseModel):
-    email: EmailStr
-    password: str
+    email: EmailStr = Field(..., description="Registered email address")
+    password: str = Field(..., description="Account password")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [{"email": "user@example.com", "password": "SecurePassword123!"}]
+        }
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -110,7 +122,7 @@ class PaginatedAnalysisResponse(BaseModel):
     """Envelope for paginated analysis list with HATEOAS links."""
     data: list[dict[str, Any]]
     pagination: PaginationMeta
-    _links: dict[str, Any] = Field(default_factory=dict, alias="_links")
+    links: dict[str, Any] = Field(default_factory=dict, alias="_links")
 
     class Config:
         populate_by_name = True
@@ -121,4 +133,10 @@ class PaginatedAnalysisResponse(BaseModel):
 # ---------------------------------------------------------------------------
 class DeleteAnalysesRequest(BaseModel):
     """Typed request body for bulk deletion."""
-    ids: list[str]
+    ids: list[str] = Field(..., description="List of unique analysis identifiers to permanently delete")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [{"ids": ["123e4567-e89b-12d3-a456-426614174000", "987e6543-e21b-12d3-a456-426614174000"]}]
+        }
+    )

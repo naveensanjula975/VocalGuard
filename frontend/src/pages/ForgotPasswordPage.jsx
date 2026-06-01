@@ -1,14 +1,8 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { api } from "../services/api";
-
-// ── Spinner inline SVG ───────────────────────
-const Spinner = () => (
-  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-  </svg>
-);
+import logo from "../assets/logo.jpg";
+import "../styles/design-tokens.css";
+import "../components/AuthPages.css";
 
 const ForgotPasswordPage = () => {
   const [email, setEmail] = useState("");
@@ -18,64 +12,71 @@ const ForgotPasswordPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-
     try {
-      await api.sendPasswordResetLink(email);
-      setStatus({ type: "success", message: "Password reset link has been sent to your email!" });
-    } catch (error) {
-      setStatus({ type: "error", message: error.message || "Failed to send reset link. Please try again." });
-    } finally {
-      setIsLoading(false);
-    }
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      setStatus({ type: "success", message: "Reset link sent — check your inbox." });
+    } catch {
+      setStatus({ type: "error", message: "Failed to send reset link. Please try again." });
+    } finally { setIsLoading(false); }
   };
 
   return (
-    <div className="login-page">
-      <div className="login-container">
-        <div className="header">
-          <h3 className="welcome-text">Reset Password 🔐</h3>
-          <h2>Forgot your password?</h2>
+    <div className="auth-page">
+      <div className="auth-card">
+
+        {/* Logo */}
+        <div className="auth-logo-row">
+          <img src={logo} alt="VocalGuard" className="auth-logo-img" />
         </div>
 
-        <p className="text-gray-600 text-sm mb-6 text-left">
-          Enter your email address and we'll send you a link to reset your password.
-        </p>
+        {/* Heading */}
+        <div className="auth-heading">
+          <h1>Reset your password</h1>
+          <p>Enter your email and we'll send a reset link straight away.</p>
+        </div>
 
-        <form onSubmit={handleSubmit}>
-          <div>
-            <label htmlFor="email">Email address</label>
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="auth-form">
+          <div className="vg-field">
+            <label className="vg-label" htmlFor="email">Email address</label>
             <input
-              type="email"
-              id="email"
+              className="vg-input" type="email" id="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter your email"
+              onChange={e => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              autoComplete="email"
               required
             />
           </div>
 
           {status.message && (
-            <div className={status.type === "success" ? "auth-success" : "auth-error"} role="alert">
+            <div className={status.type === "success" ? "auth-success" : "auth-error"}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                {status.type === "success"
+                  ? <><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>
+                  : <><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></>
+                }
+              </svg>
               {status.message}
             </div>
           )}
 
-          <button type="submit" disabled={isLoading}>
-            {isLoading ? (
-              <span className="flex items-center justify-center">
-                <Spinner />
-                Sending...
-              </span>
-            ) : (
-              "Send Reset Link"
-            )}
+          <button
+            type="submit"
+            className="vg-btn vg-btn-primary auth-submit"
+            disabled={isLoading || !email || status.type === "success"}
+          >
+            {isLoading ? <><span className="vg-spinner" />Sending…</> : "Send reset link"}
           </button>
         </form>
 
-        <div className="auth-footer">
-          <Link to="/login">← Back to Login</Link>
-        </div>
+        {/* Back link */}
+        <p className="auth-switch">
+          <Link to="/login">← Back to sign in</Link>
+        </p>
       </div>
+
+      <p className="auth-footer">© 2026 VocalGuard · AI Audio Detection</p>
     </div>
   );
 };

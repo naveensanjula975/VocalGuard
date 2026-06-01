@@ -1,0 +1,304 @@
+/* ════════════════════════════════════════════════════════
+   ProgressIndicator — cinematic analysis loading UI
+   ════════════════════════════════════════════════════════ */
+
+/* ── Root wrapper ───────────────────────────────────── */
+.pi-root {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  padding: 40px 24px 32px;
+  width: 100%;
+  max-width: 440px;
+  margin: 0 auto;
+  position: relative;
+  animation: piFadeIn 0.5s cubic-bezier(0.16,1,0.3,1) both;
+}
+
+@keyframes piFadeIn {
+  from { opacity: 0; transform: translateY(16px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)   scale(1); }
+}
+
+/* Stage-transition flash */
+.pi-root--flash::before {
+  content: '';
+  position: absolute;
+  inset: -12px;
+  border-radius: 28px;
+  background: radial-gradient(ellipse 80% 60% at 50% 40%, rgba(124,58,237,0.08) 0%, transparent 70%);
+  animation: piFlash 0.6s ease both;
+  pointer-events: none;
+}
+@keyframes piFlash {
+  0%   { opacity: 0; transform: scale(0.95); }
+  40%  { opacity: 1; transform: scale(1.02); }
+  100% { opacity: 0; transform: scale(1);    }
+}
+
+/* ── Ambient background glow ────────────────────────── */
+.pi-glow {
+  position: absolute;
+  top: 10px; left: 50%;
+  transform: translateX(-50%);
+  width: 260px; height: 260px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(124,58,237,0.10) 0%, rgba(219,39,119,0.06) 50%, transparent 70%);
+  pointer-events: none;
+  animation: piGlowPulse 3s ease-in-out infinite;
+}
+@keyframes piGlowPulse {
+  0%,100% { transform: translateX(-50%) scale(1);    opacity: 0.7; }
+  50%     { transform: translateX(-50%) scale(1.15); opacity: 1;   }
+}
+
+/* ── SVG ring container ─────────────────────────────── */
+.pi-visual {
+  position: relative;
+  width: 130px;
+  height: 130px;
+  flex-shrink: 0;
+}
+
+.pi-ring {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+  overflow: visible;
+}
+
+.pi-ring-track {
+  stroke: rgba(0,0,0,0.06);
+}
+
+/* Progress arc — transition handled inline via style prop */
+.pi-ring-fill {
+  will-change: stroke-dashoffset;
+}
+
+/* Glowing dot at the arc tip */
+.pi-ring-dot {
+  fill: #7c3aed;
+  filter: drop-shadow(0 0 4px rgba(124,58,237,0.9)) drop-shadow(0 0 10px rgba(219,39,119,0.5));
+  animation: piDotPulse 1.4s ease-in-out infinite;
+}
+@keyframes piDotPulse {
+  0%,100% { r: 4.5; opacity: 1; }
+  50%     { r: 6;   opacity: 0.7; }
+}
+
+/* ── Center readout ─────────────────────────────────── */
+.pi-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: row;
+  gap: 1px;
+}
+
+.pi-pct {
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.05em;
+  line-height: 1;
+  /* Gradient text */
+  background: linear-gradient(135deg, #7c3aed, #db2777);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  transition: all 0.3s ease;
+}
+
+.pi-pct-sym {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: #9ca3af;
+  align-self: flex-end;
+  padding-bottom: 5px;
+}
+
+/* Done checkmark */
+.pi-center-done {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: piCheckPop 0.45s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+@keyframes piCheckPop {
+  from { transform: scale(0) rotate(-20deg); opacity: 0; }
+  to   { transform: scale(1) rotate(0deg);  opacity: 1; }
+}
+
+/* ── Waveform ───────────────────────────────────────── */
+.pi-waveform {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2.5px;
+  width: 100%;
+  height: 44px;
+  padding: 6px 16px;
+  background: rgba(124,58,237,0.03);
+  border: 1px solid rgba(124,58,237,0.08);
+  border-radius: 12px;
+}
+
+.pi-bar {
+  flex: 1;
+  max-width: 5px;
+  border-radius: 3px;
+  background: linear-gradient(to top, rgba(124,58,237,0.8), rgba(219,39,119,0.9));
+  transform-origin: center bottom;
+  animation: piBar var(--dur) var(--del) ease-in-out infinite alternate;
+  height: var(--maxH);
+  transition: height 0.4s ease, opacity 0.4s ease;
+}
+@keyframes piBar {
+  from { transform: scaleY(0.12); opacity: 0.25; }
+  to   { transform: scaleY(1);    opacity: 0.9;  }
+}
+
+/* Flatten bars when done */
+.pi-bar--flat {
+  animation: none;
+  transform: scaleY(1) !important;
+  height: 3px !important;
+  opacity: 0.15 !important;
+  background: rgba(124,58,237,0.3);
+  transition: height 0.5s ease, opacity 0.5s ease, transform 0.5s ease;
+}
+
+/* ── Status line ────────────────────────────────────── */
+.pi-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 20px;
+}
+
+.pi-status-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #7c3aed, #db2777);
+  flex-shrink: 0;
+  box-shadow: 0 0 8px rgba(124,58,237,0.7);
+  animation: piDotBlink 1.5s ease-in-out infinite;
+}
+@keyframes piDotBlink {
+  0%,100% { opacity: 1; box-shadow: 0 0 8px rgba(124,58,237,0.7); }
+  50%     { opacity: 0.3; box-shadow: 0 0 3px rgba(124,58,237,0.2); }
+}
+
+.pi-status-text {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: #6b7280;
+  letter-spacing: 0.01em;
+  /* Slide in on change */
+  animation: piStatusSlide 0.35s cubic-bezier(0.16,1,0.3,1) both;
+}
+@keyframes piStatusSlide {
+  from { opacity: 0; transform: translateX(8px); }
+  to   { opacity: 1; transform: translateX(0);   }
+}
+
+/* ── Stage steps list ───────────────────────────────── */
+.pi-stages {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+}
+
+.pi-stage {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  border-radius: 10px;
+  transition: background 0.25s ease, opacity 0.25s ease;
+  opacity: 0.35;
+}
+
+/* Done stage */
+.pi-stage--done {
+  opacity: 0.65;
+}
+.pi-stage--done .pi-stage-icon {
+  background: rgba(22,163,74,0.1);
+  border-color: rgba(22,163,74,0.2);
+  color: #16a34a;
+}
+.pi-stage--done .pi-stage-label {
+  color: #6b7280;
+  text-decoration: line-through;
+  text-decoration-color: rgba(0,0,0,0.18);
+}
+
+/* Active stage */
+.pi-stage--active {
+  opacity: 1;
+  background: rgba(124,58,237,0.05);
+}
+.pi-stage--active .pi-stage-icon {
+  background: linear-gradient(135deg, rgba(124,58,237,0.12), rgba(219,39,119,0.08));
+  border-color: rgba(124,58,237,0.22);
+}
+.pi-stage--active .pi-stage-label {
+  color: #09090f;
+  font-weight: 600;
+}
+
+/* Stage icon bubble */
+.pi-stage-icon {
+  width: 32px; height: 32px;
+  border-radius: 9px;
+  background: rgba(0,0,0,0.04);
+  border: 1px solid rgba(0,0,0,0.07);
+  display: flex; align-items: center; justify-content: center;
+  color: #9ca3af;
+  flex-shrink: 0;
+  transition: background 0.25s, border-color 0.25s, color 0.25s;
+}
+
+.pi-stage-label {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: #9ca3af;
+  flex: 1;
+  transition: color 0.25s, font-weight 0.25s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Inline spinner for active stage */
+.pi-stage-spinner {
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(124,58,237,0.2);
+  border-top-color: #7c3aed;
+  flex-shrink: 0;
+  animation: piSpin 0.7s linear infinite;
+}
+@keyframes piSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Done state override ─────────────────────────────── */
+.pi-root--done .pi-status-dot {
+  background: #16a34a;
+  box-shadow: 0 0 8px rgba(22,163,74,0.6);
+  animation: none;
+  opacity: 1;
+}
+.pi-root--done .pi-glow {
+  background: radial-gradient(circle, rgba(22,163,74,0.08) 0%, transparent 70%);
+}

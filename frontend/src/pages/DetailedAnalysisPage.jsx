@@ -1,113 +1,111 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import DetailedAnalysis from "../components/DetailedAnalysis";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../services/api";
-import { formatForDetailedComponent } from "../utils/formatAnalysis";
+import "../styles/design-tokens.css";
+import "../components/DetailedAnalysis.css";
 
 const DetailedAnalysisPage = () => {
   const location = useLocation();
-  const navigate = useNavigate();
-  const { user } = useAuth();
-  const { id } = useParams();
+  const navigate  = useNavigate();
+  const { user }  = useAuth();
+  const { id }    = useParams();
 
+  const [analysisData, setAnalysisData] = useState(location.state?.analysisData || null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [analysisData, setAnalysisData] = useState(
-    location.state?.analysisData || null,
-  );
-
-  // ── Use a ref to capture the initial nav-state without triggering re-fetches ──
-  const initialNavState = useRef(location.state?.analysisData);
-  const token = user?.token;
+  const [error,   setError]   = useState(null);
 
   useEffect(() => {
-    const fetchAnalysisData = async () => {
-      // Skip fetch if we already have data from navigation state
-      if (initialNavState.current || !id || !token) return;
+    if (location.state?.analysisData || !id || !user?.token) return;
+    setLoading(true);
 
-      setLoading(true);
-      try {
-        const data = await api.getAnalysisById(id, token);
+    api.getAnalysisById(id, user.token).then((data) => {
+      if (!data) { setError("Analysis not found"); setLoading(false); return; }
 
-        if (!data) {
-          setError("Analysis not found");
-          setLoading(false);
-          return;
-        }
+      const uploadDate    = new Date(data.analysis_timestamp || data.metadata?.upload_timestamp);
+      const formattedDate = uploadDate.toLocaleDateString("en-US", {
+        year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
+      });
 
-        setAnalysisData(formatForDetailedComponent(data));
-      } catch (err) {
-        console.error("Error fetching analysis:", err);
-        setError("Failed to load analysis details");
+      const detailsArray = [];
+      if (data.details?.feature_scores) {
+        const f = data.details.feature_scores;
+        if (f.mfcc_score !== undefined)     detailsArray.push({ label:"Voice Pattern Analysis",  value: f.mfcc_score     > 0.5 ? "Artificial" : "Natural",    description: f.mfcc_score     > 0.5 ? "Patterns indicate potential AI generation"                         : "Patterns match typical human speech characteristics",  score: f.mfcc_score });
+        if (f.spectral_score !== undefined) detailsArray.push({ label:"Frequency Analysis",       value: f.spectral_score > 0.5 ? "Abnormal"   : "Normal",      description: f.spectral_score > 0.5 ? "Unusual frequency distribution detected"                         : "Frequency distribution within expected human range",   score: f.spectral_score });
+        if (f.wav2vec2_score !== undefined) detailsArray.push({ label:"Neural Pattern Analysis",  value: f.wav2vec2_score > 0.5 ? "AI Detected": "Human Likely", description: f.wav2vec2_score > 0.5 ? "Neural network detected patterns consistent with AI generation" : "Neural patterns more consistent with human speech",     score: f.wav2vec2_score });
+        if (f.temporal_score !== undefined) detailsArray.push({ label:"Temporal Coherence",       value: f.temporal_score > 0.5 ? "Inconsistent": "Consistent",  description: f.temporal_score > 0.5 ? "Time-based patterns show potential synthesis artifacts"          : "Time-based patterns show natural human speech variation", score: f.temporal_score });
       }
-      setLoading(false);
-    };
+      if (detailsArray.length === 0) detailsArray.push({ label:"Overall Analysis", value: data.is_deepfake ? "Artificial" : "Natural", description: data.is_deepfake ? "AI patterns detected" : "Natural human voice characteristics detected", score: data.confidence_score });
 
-    fetchAnalysisData();
-  }, [id, token]);
+      setAnalysisData({
+        id:            data.id,
+        date:          formattedDate,
+        fileName:      data.metadata?.filename  || "Unknown File",
+        result:        data.is_deepfake ? `${Math.round(data.confidence_score * 100)}% Fake` : `${Math.round((1 - data.confidence_score) * 100)}% Real`,
+        isAI:          data.is_deepfake,
+        confidence:    Math.round(data.confidence_score * 100),
+        duration:      data.metadata?.duration  ? `${data.metadata.duration.toFixed(2)}s`                      : "—",
+        format:        data.metadata?.filename  ? data.metadata.filename.split(".").pop().toUpperCase()         : "—",
+        sampleRate:    data.metadata?.sample_rate ? `${(data.metadata.sample_rate / 1000).toFixed(1)} kHz`     : "—",
+        analysisTime:  data.details?.processing_time != null ? data.details.processing_time.toFixed(0)         : "—",
+        details:       detailsArray,
+        rawData:       data,
+      });
+    }).catch((err) => {
+      console.error(err);
+      setError("Failed to load analysis details");
+    }).finally(() => setLoading(false));
+  }, [id, user, location.state]);
 
-  // Redirect to history if no data and not loading
-  useEffect(() => {
-    if (!analysisData && !loading && !error) {
-      navigate("/history");
-    }
-  }, [analysisData, loading, error, navigate]);
+  if (!analysisData && !loading && !error) { navigate("/history"); return null; }
 
-  const handleBackToResult = useCallback(() => {
-    const analysisId = analysisData?.rawData?.id || id;
-    navigate(analysisId ? `/result/${analysisId}` : "/history");
-  }, [analysisData?.rawData?.id, id, navigate]);
-
-  if (!analysisData && !loading && !error) {
-    return null;
-  }
+  const handleBack = () => {
+    if (analysisData?.rawData?.id) navigate(`/result/${analysisData.rawData.id}`);
+    else if (id) navigate(`/result/${id}`);
+    else navigate("/history");
+  };
 
   return (
-    <div>
+    <div style={{ background: "var(--surface)", minHeight: "100vh" }}>
+
+      {/* ── Top bar ── */}
+      <div className="da-topbar">
+        <div className="da-topbar-inner">
+          <button className="da-back-btn" onClick={handleBack}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 12H5M12 5l-7 7 7 7"/>
+            </svg>
+            Back to result
+          </button>
+          {analysisData && (
+            <div className="da-topbar-meta">
+              <span className="da-topbar-filename">{analysisData.fileName}</span>
+              <span className="da-topbar-dot" />
+              <span className="da-topbar-date">{analysisData.date}</span>
+            </div>
+          )}
+        </div>
+      </div>
+
       {loading ? (
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-700" />
+        <div className="da-state">
+          <span className="vg-spinner vg-spinner-dark" style={{ width: 28, height: 28, borderWidth: 3 }} />
+          <span>Loading analysis…</span>
         </div>
       ) : error ? (
-        <div className="max-w-3xl mx-auto my-12 p-8 bg-red-50 rounded-lg text-center">
-          <p className="text-red-600 text-lg">{error}</p>
-          <button
-            onClick={() => navigate("/history")}
-            className="mt-4 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
-          >
-            Return to History
+        <div className="da-state da-state--error">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <span>{error}</span>
+          <button onClick={() => navigate("/history")} className="vg-btn vg-btn-primary" style={{ marginTop: 8 }}>
+            Return to history
           </button>
         </div>
-      ) : analysisData ? (
-        <>
-          <div className="bg-gray-50 p-4">
-            <div className="max-w-7xl mx-auto">
-              <button
-                onClick={handleBackToResult}
-                className="flex items-center text-purple-600 hover:text-purple-800 transition-colors"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 mr-1"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                  />
-                </svg>
-                Back to Basic Result
-              </button>
-            </div>
-          </div>
-          <DetailedAnalysis analysisData={analysisData} />
-        </>
-      ) : null}
+      ) : (
+        <DetailedAnalysis analysisData={analysisData} />
+      )}
     </div>
   );
 };

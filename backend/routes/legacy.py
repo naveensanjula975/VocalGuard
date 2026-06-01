@@ -10,14 +10,15 @@ Remove this file once all clients have migrated.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Body, Depends, File, UploadFile
+from fastapi import APIRouter, Body, Depends, File, UploadFile, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 
-from config import ANALYSIS_TYPE_TO_MODEL
-from dependencies import get_current_user, get_db, save_upload_to_temp
+from config import ANALYSIS_TYPE_TO_MODEL, API_V1_PREFIX
+from dependencies import get_current_user, get_db, save_upload_to_temp, validate_audio_file
 from logger import get_logger
 from core.detect_deepfake import detect_deepfake, detect_deepfake_ensemble
 from services.database_service import DatabaseService
+from rate_limiter import limiter
 
 logger = get_logger(__name__)
 router = APIRouter(tags=["legacy"], include_in_schema=False)
@@ -28,18 +29,18 @@ router = APIRouter(tags=["legacy"], include_in_schema=False)
 @router.post("/signup")
 async def legacy_signup():
     """Redirect POST clients to /v1/auth/signup."""
-    return RedirectResponse("/v1/auth/signup", status_code=307)
+    return RedirectResponse(f"{API_V1_PREFIX}/auth/signup", status_code=307)
 
 
 @router.post("/login")
 async def legacy_login():
     """Redirect POST clients to /v1/auth/login."""
-    return RedirectResponse("/v1/auth/login", status_code=307)
+    return RedirectResponse(f"{API_V1_PREFIX}/auth/login", status_code=307)
 
 
 @router.get("/protected")
 async def legacy_protected():
-    return RedirectResponse("/v1/auth/me", status_code=301)
+    return RedirectResponse(f"{API_V1_PREFIX}/auth/me", status_code=301)
 
 
 # ── Detection shims (POST — must forward body) ───────────────────────
@@ -69,24 +70,30 @@ async def _legacy_detect(
 
 
 @router.post("/detect-deepfake/")
+@limiter.limit("5/minute")
 async def legacy_detect_standard(
-    file: UploadFile = File(...),
+    request: Request,
+    file: UploadFile = Depends(validate_audio_file),
     token_data: dict = Depends(get_current_user),
 ):
     return await _legacy_detect(file, token_data, "standard")
 
 
 @router.post("/detect-deepfake-advanced/")
+@limiter.limit("5/minute")
 async def legacy_detect_advanced(
-    file: UploadFile = File(...),
+    request: Request,
+    file: UploadFile = Depends(validate_audio_file),
     token_data: dict = Depends(get_current_user),
 ):
     return await _legacy_detect(file, token_data, "advanced")
 
 
 @router.post("/detect-deepfake-transformer/")
+@limiter.limit("5/minute")
 async def legacy_detect_transformer(
-    file: UploadFile = File(...),
+    request: Request,
+    file: UploadFile = Depends(validate_audio_file),
     token_data: dict = Depends(get_current_user),
 ):
     try:
@@ -107,8 +114,10 @@ async def legacy_detect_transformer(
 
 
 @router.post("/detect-deepfake-attention-analysis/")
+@limiter.limit("5/minute")
 async def legacy_detect_attention(
-    file: UploadFile = File(...),
+    request: Request,
+    file: UploadFile = Depends(validate_audio_file),
     token_data: dict = Depends(get_current_user),
 ):
     try:
@@ -135,7 +144,8 @@ async def legacy_detect_attention(
 
 
 @router.post("/detect-deepfake-demo")
-async def legacy_demo(file: UploadFile = File(...)):
+@limiter.limit("3/minute")
+async def legacy_demo(request: Request, file: UploadFile = Depends(validate_audio_file)):
     try:
         async with save_upload_to_temp(file) as tmp_path:
             result = detect_deepfake(
@@ -154,17 +164,17 @@ async def legacy_demo(file: UploadFile = File(...)):
 
 @router.get("/user/analyses")
 async def legacy_user_analyses():
-    return RedirectResponse("/v1/analyses", status_code=301)
+    return RedirectResponse(f"{API_V1_PREFIX}/analyses", status_code=301)
 
 
 @router.get("/data/analyses")
 async def legacy_data_analyses():
-    return RedirectResponse("/v1/analyses", status_code=301)
+    return RedirectResponse(f"{API_V1_PREFIX}/analyses", status_code=301)
 
 
 @router.get("/analyses/{analysis_id}")
 async def legacy_get_analysis(analysis_id: str):
-    return RedirectResponse(f"/v1/analyses/{analysis_id}", status_code=301)
+    return RedirectResponse(f"{API_V1_PREFIX}/analyses/{analysis_id}", status_code=301)
 
 
 @router.post("/analyses/delete")
@@ -183,4 +193,4 @@ async def legacy_delete(
 
 @router.post("/generate-dummy-data")
 async def legacy_seed():
-    return RedirectResponse("/v1/debug/seed", status_code=307)
+    return RedirectResponse(f"{API_V1_PREFIX}/debug/seed", status_code=307)

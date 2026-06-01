@@ -19,6 +19,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from config import ALLOWED_ORIGINS, API_V1_PREFIX, FIREBASE_WEB_API_KEY
 from exceptions import register_exception_handlers
 from services.firebase_config import initialize_firebase
+from asgi_correlation_id import CorrelationIdMiddleware
+from rate_limiter import limiter
 
 # ---------------------------------------------------------------------------
 # Validate critical config (fail-fast)
@@ -39,8 +41,11 @@ app = FastAPI(
 )
 
 # ---------------------------------------------------------------------------
-# Middleware
+# Middleware & State
 # ---------------------------------------------------------------------------
+app.state.limiter = limiter
+
+app.add_middleware(CorrelationIdMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
@@ -66,12 +71,14 @@ from routes.auth import router as auth_router            # noqa: E402
 from routes.analyses import router as analyses_router    # noqa: E402
 from routes.demo import router as demo_router            # noqa: E402
 from routes.debug import router as debug_router          # noqa: E402
+from routes.explain import router as explain_router      # noqa: E402
 
 v1 = APIRouter(prefix=API_V1_PREFIX)
 v1.include_router(auth_router)
 v1.include_router(analyses_router)
 v1.include_router(demo_router)
 v1.include_router(debug_router)
+v1.include_router(explain_router)    # POST /api/v1/explain
 
 app.include_router(v1)
 
@@ -94,6 +101,12 @@ async def root():
 @app.get("/health", tags=["health"])
 async def health():
     return {"status": "ok"}
+
+
+@app.get("/ready", tags=["health"])
+async def ready():
+    """Liveness probe for container orchestration."""
+    return {"status": "ready"}
 
 
 # ---------------------------------------------------------------------------

@@ -1,102 +1,211 @@
-// ─────────────────────────────────────────────
-// API Service — VocalGuard Frontend
-// ─────────────────────────────────────────────
-// Centralised HTTP layer.  Every endpoint goes through `request()`,
-// which handles headers, auth, JSON parsing, and error shaping in
-// one place so individual methods stay tiny and consistent.
-// ─────────────────────────────────────────────
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000';
 
-const API_BASE_URL =
-    import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
-
-// ── Private helper ──────────────────────────
-/**
- * Generic fetch wrapper.
- *
- * @param {string}  endpoint  - URL path (relative to API_BASE_URL)
- * @param {object}  options
- * @param {string}  [options.method='GET']
- * @param {string}  [options.token]       - Bearer token for protected routes
- * @param {object}  [options.body]        - JSON body (auto-stringified)
- * @param {FormData}[options.formData]    - Multipart body (takes precedence over body)
- * @returns {Promise<any>}
- */
-async function request(endpoint, { method = 'GET', token, body, formData } = {}) {
-    const headers = {};
-
-    if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    // Only set Content-Type for JSON bodies; fetch sets it automatically for FormData
-    if (body && !formData) {
-        headers['Content-Type'] = 'application/json';
-    }
-
-    try {
-        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-            method,
-            headers,
-            body: formData ?? (body ? JSON.stringify(body) : undefined),
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            const message = data?.detail || `Request failed (${response.status})`;
-            throw new Error(message);
-        }
-
-        return data;
-    } catch (error) {
-        // Re-throw with a consistent shape
-        throw new Error(error.message || 'Network error');
-    }
-}
-
-// ── Public API ──────────────────────────────
 export const api = {
-    // ─── Auth ───────────────────────────────
-    signup: (userData) =>
-        request('/signup', { method: 'POST', body: userData }),
+    signup: async (userData) => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/signup`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(userData),
+            }); if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || 'Signup failed');
+            }
 
-    login: (credentials) =>
-        request('/login', { method: 'POST', body: credentials }),
+            return response.json();
+        } catch (error) {
+            throw new Error(error.message || 'Network error');
+        }
+    }, verifyToken: async (token) => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/protected`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
 
-    verifyToken: (token) =>
-        request('/protected', { token }),
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || 'Token verification failed');
+            }
 
-    sendPasswordResetLink: (email) =>
-        request('/forgot-password', { method: 'POST', body: { email } }),
+            return response.json();
+        } catch (error) {
+            throw new Error(error.message || 'Token verification failed');
+        }
+    },
 
-    // ─── Detection ─────────────────────────
-    detectDeepfake: (formData, token) =>
-        request('/detect-deepfake/', { method: 'POST', token, formData }),
+    login: async (credentials) => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(credentials),
+            });
 
-    detectDeepfakeAdvanced: (formData, token) =>
-        request('/detect-deepfake-advanced/', { method: 'POST', token, formData }),
+            const data = await response.json();
 
-    detectDeepfakeDemo: (formData) =>
-        request('/detect-deepfake-demo', { method: 'POST', formData }),
+            if (!response.ok) {
+                // Handle Firebase specific errors
+                if (data.detail && data.detail.includes('FIREBASE_ERROR:')) {
+                    throw new Error(data.detail);
+                }
+                throw new Error(data.detail || 'Login failed');
+            }
 
-    // ─── Analyses CRUD ─────────────────────
-    getUserAnalyses: (token) =>
-        request('/data/analyses', { token }),
+            // Ensure we have all required fields
+            if (!data.token || !data.user_id || !data.username) {
+                console.error('Login response missing required fields:', data);
+                throw new Error('Incomplete login data received from server');
+            }
 
-    getAnalysisById: (analysisId, token) =>
-        request(`/analyses/${analysisId}`, { token }),
+            return data;
+        } catch (error) {
+            console.error('Login error:', error);
+            throw error;
+        }
+    }, detectDeepfake: async (formData, token) => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/detect-deepfake/`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: formData,
+            });
 
-    deleteAnalysis: (analysisId, token) =>
-        request(`/analyses/${analysisId}`, { method: 'DELETE', token }),
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || 'Detection failed');
+            }
 
-    deleteAnalyses: (analysisIds, token) =>
-        request('/analyses/delete', {
-            method: 'POST',
-            token,
-            body: { analysis_ids: analysisIds },
-        }),
+            return response.json();
+        } catch (error) {
+            throw new Error(error.message || 'Network error');
+        }
+    }, detectDeepfakeAdvanced: async (formData, token) => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/detect-deepfake-advanced/`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: formData,
+            });
 
-    // ─── Debug / Demo ──────────────────────
-    generateDummyData: (token) =>
-        request('/generate-dummy-data', { method: 'POST', token }),
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || 'Advanced detection failed');
+            }
+
+            return response.json();
+        } catch (error) {
+            throw new Error(error.message || 'Network error');
+        }
+    },
+
+    detectDeepfakeDemo: async (formData) => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/detect-deepfake-demo`, {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || 'Detection failed');
+            }
+
+            return response.json();
+        } catch (error) {
+            throw new Error(error.message || 'Network error');
+        }
+    },
+
+    getUserAnalyses: async (token) => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/v1/analyses`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || error.detail || 'Failed to retrieve analyses');
+            }
+
+            return response.json();
+        } catch (error) {
+            throw new Error(error.message || 'Network error');
+        }
+    },
+
+    getAnalysisById: async (analysisId, token) => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/v1/analyses/${analysisId}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || 'Failed to retrieve analysis');
+            }
+
+            return response.json();
+        } catch (error) {
+            throw new Error(error.message || 'Network error');
+        }
+    },
+
+    generateDummyData: async (token) => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/generate-dummy-data`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || 'Failed to generate dummy data');
+            }
+
+            return response.json();
+        } catch (error) {
+            throw new Error(error.message || 'Network error');
+        }
+    },
+
+    deleteAnalyses: async (analysisIds, token) => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/v1/analyses`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ ids: analysisIds }),
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || 'Failed to delete analyses');
+            }
+
+            return response.json();
+        } catch (error) {
+            throw new Error(error.message || 'Network error');
+        }
+    }
 };
