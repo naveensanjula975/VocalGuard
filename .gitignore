@@ -30,6 +30,8 @@ backend/services/__pycache__/
 __pycache__/
 *.pyc
 *.bat
+.vscode/
+WAV2VEC2_INTEGRATION.md
 *.pyo
 *.pyd
 /docs
