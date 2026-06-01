@@ -26,3 +26,12 @@ backend/.env.actual
 backend/data/
 backend/core/__pycache__/
 backend/services/__pycache__/
+
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+/docs
+ARCHITECTURE.md
+backend/BACKEND.md
+CLAUDE.md
