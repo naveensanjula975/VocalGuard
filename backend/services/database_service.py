@@ -125,25 +125,28 @@ class DatabaseService:
             ``(data, next_cursor)`` — *next_cursor* is ``None`` when
             there are no more pages.
         """
+        # Fetch without order_by to avoid requiring a composite Firestore index.
+        # Sort and paginate in Python instead.
         query = (
             self.db.collection("audio_metadata")
             .where(filter=FieldFilter("user_id", "==", user_id))
-            .order_by("upload_timestamp", direction=firestore.Query.DESCENDING)
-            .limit(per_page + 1)
         )
 
-        if after_cursor:
-            cursor_doc = (
-                self.db.collection("audio_metadata")
-                .document(after_cursor)
-                .get()
-            )
-            if cursor_doc.exists:
-                query = query.start_after(cursor_doc)
+        all_docs = list(query.stream())
+        all_docs.sort(
+            key=lambda d: d.to_dict().get("upload_timestamp", ""),
+            reverse=True,
+        )
 
-        metadata_docs = list(query.stream())
-        has_more = len(metadata_docs) > per_page
-        metadata_docs = metadata_docs[:per_page]
+        # Cursor-based pagination: skip everything up to and including after_cursor
+        if after_cursor:
+            ids = [d.id for d in all_docs]
+            if after_cursor in ids:
+                start = ids.index(after_cursor) + 1
+                all_docs = all_docs[start:]
+
+        has_more = len(all_docs) > per_page
+        metadata_docs = all_docs[:per_page]
 
         next_cursor = metadata_docs[-1].id if has_more and metadata_docs else None
 
