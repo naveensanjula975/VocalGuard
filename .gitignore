@@ -188,3 +188,6 @@ temp/
 .eslintcache
 docs/
 *.md
+*.bat
+.vscode/
+.obsidian/
