@@ -30,7 +30,7 @@ const AppContent = () => {
   return (
     <div className="flex flex-col w-full min-h-screen">
       {!isAuthPage && <Navbar />}
-      <main className="flex-1 w-full min-h-[calc(100vh-64px)] bg-gray-50">
+      <main className="flex-1 w-full bg-gray-50">
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />

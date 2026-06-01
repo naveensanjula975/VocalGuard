@@ -3,6 +3,8 @@ import { useLocation, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../services/api";
 import Result from "../components/Result";
+import "../components/Result.css";
+import "../styles/design-tokens.css";
 
 export default function ResultPage() {
   const [loading, setLoading] = useState(false);
@@ -128,21 +130,14 @@ export default function ResultPage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-700"></div>
+      <div className="result-loading">
+        <span className="vg-spinner vg-spinner-dark" style={{ width: 24, height: 24, borderWidth: 3 }} />
+        Loading analysis…
       </div>
     );
   }
   if (error) {
-    return (
-      <div className="max-w-3xl mx-auto my-12 p-8 bg-red-50 rounded-lg text-center">
-        <p className="text-red-600 text-lg">{error}</p>
-      </div>
-    );
+    return <div className="result-error"><p>{error}</p></div>;
   }
-  return (
-    <div>
-      <Result result={analysisData} />
-    </div>
-  );
+  return <Result result={analysisData} />;
 }

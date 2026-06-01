@@ -1,214 +1,244 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import logo from "../assets/logoo.png";
+import logo from "../assets/logo.jpg";
+import "../styles/design-tokens.css";
+import "./Navbar.css";
 
 const Navbar = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const profileRef = useRef(null);
+  const location = useLocation();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [dropOpen, setDropOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const [hidden, setHidden] = useState(false);
+  const lastY = useRef(0);
+  const dropRef = useRef(null);
+  const mobileRef = useRef(null);
 
+  /* auto-hide on scroll down, reveal on scroll up */
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (profileRef.current && !profileRef.current.contains(event.target)) {
-        setIsProfileOpen(false);
+    const onScroll = () => {
+      const y = window.scrollY;
+      setScrolled(y > 10);
+      if (y > lastY.current && y > 80) {
+        setHidden(true);          // scrolling down → hide
+        setMenuOpen(false);
+        setDropOpen(false);
+      } else {
+        setHidden(false);         // scrolling up → show
       }
+      lastY.current = y;
     };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  /* close dropdown on outside click */
+  useEffect(() => {
+    const handler = (e) => {
+      if (dropRef.current && !dropRef.current.contains(e.target)) setDropOpen(false);
+      if (mobileRef.current && !mobileRef.current.contains(e.target)) setMenuOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  /* close on route change */
+  useEffect(() => { setMenuOpen(false); setDropOpen(false); }, [location.pathname]);
+
   const handleLogout = async () => {
-    try {
-      await logout();
-      navigate("/login");
-    } catch (error) {
-      console.error("Failed to logout:", error);
-    }
+    try { await logout(); navigate("/login"); } catch {}
   };
 
+  const isActive = (path) =>
+    path === "/" ? location.pathname === "/" : location.pathname.startsWith(path);
+
+  const navLinks = user
+    ? [{ to: "/", label: "Home" }, { to: "/about", label: "About" }, { to: "/history", label: "History" }]
+    : [{ to: "/", label: "Home" }, { to: "/about", label: "About" }];
+
+  const initials = (user?.username || "U").slice(0, 2).toUpperCase();
+
   return (
-    <nav className="relative px-4 py-4 mt-5 bg-white sm:px-8">
-      <div className="flex items-center justify-between mx-auto max-w-7xl">
-        <Link to="/" className="flex items-center gap-2 no-underline">
-          <img src={logo} alt="VocalGuard" className="w-auto h-10" />
+    <header className={`nb-header${scrolled ? " nb-header--scrolled" : ""}${hidden ? " nb-header--hidden" : ""}`}>
+      <nav className="nb-bar" role="navigation" aria-label="Main navigation">
+
+        {/* ── Logo ── */}
+        <Link to="/" className="nb-logo" aria-label="VocalGuard home">
+          <img src={logo} alt="VocalGuard" className="nb-logo-img" />
         </Link>
 
-        {/* Desktop Menu */}
-        <div className="items-center hidden gap-12 md:flex">
+        {/* ── Center links (desktop) ── */}
+        <div className="nb-links" role="list">
+          {navLinks.map(({ to, label }) => (
+            <Link
+              key={to}
+              to={to}
+              role="listitem"
+              className={`nb-link${isActive(to) ? " nb-link--active" : ""}`}
+            >
+              {label}
+              {isActive(to) && <span className="nb-link-pip" aria-hidden="true" />}
+            </Link>
+          ))}
+        </div>
+
+        {/* ── Right actions (desktop) ── */}
+        <div className="nb-actions">
           {user ? (
-            // Logged in menu
             <>
-              <Link
-                to="/"
-                className="text-base font-medium text-gray-700 transition-colors duration-200 hover:text-purple-600">
-                Home
+              <Link to="/upload" className="nb-cta">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="16 16 12 12 8 16"/>
+                  <line x1="12" y1="12" x2="12" y2="21"/>
+                  <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+                </svg>
+                Analyse
               </Link>
-              <Link
-                to="/about"
-                className="text-base font-medium text-gray-700 transition-colors duration-200 hover:text-purple-600">
-                About us
-              </Link>
-              <Link
-                to="/history"
-                className="text-base font-medium text-gray-700 transition-colors duration-200 hover:text-purple-600">
-                History
-              </Link>
-              <div className="relative" ref={profileRef}>
+
+              {/* Avatar + dropdown */}
+              <div className="nb-user" ref={dropRef}>
                 <button
-                  onClick={() => setIsProfileOpen(!isProfileOpen)}
-                  className="flex items-center gap-2 text-gray-700 transition-colors duration-200 hover:text-purple-600">
-                  <div className="flex items-center justify-center w-8 h-8 bg-purple-100 rounded-full">
-                    <span className="font-medium text-purple-600">
-                      {user.username?.[0]?.toUpperCase() || "U"}
-                    </span>
-                  </div>
-                  <span className="text-sm font-medium">{user.username}</span>
+                  className="nb-avatar"
+                  onClick={() => setDropOpen(v => !v)}
+                  aria-haspopup="true"
+                  aria-expanded={dropOpen}
+                  aria-label={`User menu for ${user.username}`}
+                >
+                  <span className="nb-avatar-initials">{initials}</span>
                   <svg
-                    className={`w-4 h-4 transition-transform duration-200 ${
-                      isProfileOpen ? "rotate-180" : ""
-                    }`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19 9l-7 7-7-7"
-                    />
+                    className={`nb-avatar-chevron${dropOpen ? " nb-avatar-chevron--open" : ""}`}
+                    width="12" height="12" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="6 9 12 15 18 9"/>
                   </svg>
                 </button>
 
-                {isProfileOpen && (
-                  <div className="absolute right-0 z-50 w-48 py-1 mt-2 bg-white rounded-lg shadow-lg">
-                    <Link
-                      to="/profile"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-600">
-                      Profile Settings
-                    </Link>
-                    <button
-                      onClick={handleLogout}
-                      className="block w-full px-4 py-2 text-sm text-left text-red-600 hover:bg-red-50">
-                      Logout
-                    </button>
+                <div className={`nb-drop${dropOpen ? " nb-drop--open" : ""}`} role="menu">
+                  {/* User info */}
+                  <div className="nb-drop-user">
+                    <div className="nb-drop-avatar">{initials}</div>
+                    <div className="nb-drop-info">
+                      <span className="nb-drop-name">{user.username}</span>
+                      <span className="nb-drop-email">{user.email || "Signed in"}</span>
+                    </div>
                   </div>
-                )}
+
+                  <div className="nb-drop-sep" />
+
+                  <Link to="/profile" className="nb-drop-item" role="menuitem">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                      <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                    Profile settings
+                  </Link>
+                  <Link to="/history" className="nb-drop-item" role="menuitem">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10"/>
+                      <polyline points="12 6 12 12 16 14"/>
+                    </svg>
+                    Analysis history
+                  </Link>
+                  <Link to="/upload" className="nb-drop-item" role="menuitem">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="16 16 12 12 8 16"/>
+                      <line x1="12" y1="12" x2="12" y2="21"/>
+                      <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+                    </svg>
+                    Upload audio
+                  </Link>
+
+                  <div className="nb-drop-sep" />
+
+                  <button className="nb-drop-item nb-drop-item--danger" role="menuitem" onClick={handleLogout}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                      <polyline points="16 17 21 12 16 7"/>
+                      <line x1="21" y1="12" x2="9" y2="12"/>
+                    </svg>
+                    Sign out
+                  </button>
+                </div>
               </div>
             </>
           ) : (
-            // Not logged in menu
             <>
-              <Link
-                to="/"
-                className="text-base font-medium text-gray-700 transition-colors duration-200 hover:text-purple-600">
-                Home
-              </Link>
-              <Link
-                to="/about"
-                className="text-base font-medium text-gray-700 transition-colors duration-200 hover:text-purple-600">
-                About us
-              </Link>
-              <Link
-                to="/login"
-                className="text-base font-medium text-gray-700 transition-colors duration-200 hover:text-purple-600">
-                Login
-              </Link>
+              <Link to="/login"  className="nb-ghost">Sign in</Link>
+              <Link to="/signup" className="nb-cta">Get started</Link>
             </>
           )}
         </div>
 
-        {/* Mobile Menu Button */}
+        {/* ── Mobile hamburger ── */}
         <button
-          className="p-2 transition-colors duration-200 rounded-lg md:hidden hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500"
-          onClick={() => setIsMenuOpen(!isMenuOpen)}
+          className="nb-burger"
+          onClick={() => setMenuOpen(v => !v)}
           aria-label="Toggle menu"
-          aria-expanded={isMenuOpen}>
-          <svg
-            className="w-6 h-6 transition-transform duration-200"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24">
-            {isMenuOpen ? (
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            ) : (
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 6h16M4 12h16M4 18h16"
-              />
-            )}
-          </svg>
+          aria-expanded={menuOpen}
+          aria-controls="nb-mobile-menu"
+        >
+          <span className={`nb-burger-icon${menuOpen ? " nb-burger-icon--open" : ""}`}>
+            <span /><span /><span />
+          </span>
         </button>
-      </div>
+      </nav>
 
-      {/* Mobile Menu */}
+      {/* ── Mobile drawer ── */}
       <div
-        className={`md:hidden absolute top-full left-0 right-0 bg-white border-t border-gray-200 transform transition-all duration-300 ease-in-out ${
-          isMenuOpen
-            ? "opacity-100 translate-y-0"
-            : "opacity-0 -translate-y-2 pointer-events-none"
-        }`}>
-        <div className="flex flex-col gap-2 p-4">
+        id="nb-mobile-menu"
+        className={`nb-mobile${menuOpen ? " nb-mobile--open" : ""}`}
+        ref={mobileRef}
+        aria-hidden={!menuOpen}
+      >
+        <div className="nb-mobile-inner">
+          {/* User info strip */}
+          {user && (
+            <div className="nb-mobile-user">
+              <div className="nb-mobile-avatar">{initials}</div>
+              <div>
+                <div className="nb-mobile-uname">{user.username}</div>
+                <div className="nb-mobile-uemail">{user.email || "Signed in"}</div>
+              </div>
+            </div>
+          )}
+
+          <div className="nb-mobile-section">
+            {navLinks.map(({ to, label }) => (
+              <Link key={to} to={to}
+                className={`nb-mobile-link${isActive(to) ? " nb-mobile-link--active" : ""}`}>
+                {label}
+              </Link>
+            ))}
+          </div>
+
           {user ? (
             <>
-              <Link
-                to="/"
-                className="px-4 py-2 text-base font-medium text-gray-700 transition-colors duration-200 rounded-lg hover:text-purple-600 hover:bg-gray-50">
-                Home
-              </Link>
-              <Link
-                to="/about"
-                className="px-4 py-2 text-base font-medium text-gray-700 transition-colors duration-200 rounded-lg hover:text-purple-600 hover:bg-gray-50">
-                About us
-              </Link>
-              <Link
-                to="/history"
-                className="px-4 py-2 text-base font-medium text-gray-700 transition-colors duration-200 rounded-lg hover:text-purple-600 hover:bg-gray-50">
-                History
-              </Link>
-              <Link
-                to="/profile"
-                className="px-4 py-2 text-base font-medium text-gray-700 transition-colors duration-200 rounded-lg hover:text-purple-600 hover:bg-gray-50">
-                Profile Settings
-              </Link>
-              <button
-                onClick={handleLogout}
-                className="px-4 py-2 text-base font-medium text-left text-red-600 rounded-lg hover:bg-red-50">
-                Logout
+              <div className="nb-mobile-sep" />
+              <div className="nb-mobile-section">
+                <Link to="/upload"  className="nb-mobile-link">Upload audio</Link>
+                <Link to="/profile" className="nb-mobile-link">Profile settings</Link>
+              </div>
+              <div className="nb-mobile-sep" />
+              <button className="nb-mobile-link nb-mobile-link--danger" onClick={handleLogout}>
+                Sign out
               </button>
             </>
           ) : (
             <>
-              <Link
-                to="/"
-                className="px-4 py-2 text-base font-medium text-gray-700 transition-colors duration-200 rounded-lg hover:text-purple-600 hover:bg-gray-50">
-                Home
-              </Link>
-              <Link
-                to="/about"
-                className="px-4 py-2 text-base font-medium text-gray-700 transition-colors duration-200 rounded-lg hover:text-purple-600 hover:bg-gray-50">
-                About us
-              </Link>
-              <Link
-                to="/login"
-                className="px-4 py-2 text-base font-medium text-gray-700 transition-colors duration-200 rounded-lg hover:text-purple-600 hover:bg-gray-50">
-                Login
-              </Link>
+              <div className="nb-mobile-sep" />
+              <div className="nb-mobile-section">
+                <Link to="/login"  className="nb-mobile-link">Sign in</Link>
+                <Link to="/signup" className="nb-mobile-link nb-mobile-link--cta">Get started →</Link>
+              </div>
             </>
           )}
         </div>
       </div>
-    </nav>
+    </header>
   );
 };
 

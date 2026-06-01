@@ -1,5 +1,8 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
+import "../styles/design-tokens.css";
+import "../components/AuthPages.css";
+import { AuthSideContent } from "../components/LoginForm";
 
 const ForgotPasswordPage = () => {
   const [email, setEmail] = useState("");
@@ -9,108 +12,65 @@ const ForgotPasswordPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-
     try {
-      // TODO: Implement actual API call here
-      // Simulating API call for now
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      setStatus({
-        type: "success",
-        message: "Password reset link has been sent to your email!",
-      });
-    } catch (error) {
-      setStatus({
-        type: "error",
-        message: "Failed to send reset link. Please try again.",
-      });
-    } finally {
-      setIsLoading(false);
-    }
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      setStatus({ type: "success", message: "Reset link sent! Check your inbox." });
+    } catch {
+      setStatus({ type: "error", message: "Failed to send reset link. Please try again." });
+    } finally { setIsLoading(false); }
   };
 
   return (
-    <div className="login-page">
-      <div className="login-container">
-        <div className="header">
-          <h3 className="welcome-text">Reset Password 🔐</h3>
-          <h2>Forgot your password?</h2>
-        </div>
-
-        <p className="text-gray-600 text-sm mb-6 text-left">
-          Enter your email address and we'll send you a link to reset your
-          password.
-        </p>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-gray-700">
-              Email address
-            </label>
-            <input
-              type="email"
-              id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter your email"
-              required
-              className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            />
+    <div className="vg-auth-layout">
+      <div className="auth-left-panel">
+        <div className="auth-left-inner">
+          <div className="auth-brand vg-anim-1">
+            <div className="auth-brand-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              </svg>
+            </div>
+            <span className="auth-brand-name">VocalGuard</span>
           </div>
 
-          {status.message && (
-            <div
-              className={`p-4 rounded-lg ${
-                status.type === "success"
-                  ? "bg-green-50 text-green-800"
-                  : "bg-red-50 text-red-800"
-              }`}>
-              {status.message}
+          <div className="auth-heading vg-anim-2">
+            <h1>Reset your password</h1>
+            <p>Enter your email and we'll send a reset link within seconds.</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="auth-form vg-anim-3">
+            <div className="vg-field">
+              <label className="vg-label" htmlFor="email">Email address</label>
+              <input className="vg-input" type="email" id="email"
+                value={email} onChange={e => setEmail(e.target.value)}
+                placeholder="you@example.com" required />
             </div>
-          )}
 
-          <button
-            type="submit"
-            disabled={isLoading}
-            className={`w-full px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg font-semibold 
-              hover:from-purple-600 hover:to-pink-600 transition-all duration-200 
-              ${isLoading ? "opacity-70 cursor-not-allowed" : ""}`}>
-            {isLoading ? (
-              <span className="flex items-center justify-center">
-                <svg
-                  className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24">
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            {status.message && (
+              <div className={status.type === "success" ? "auth-success" : "auth-error"}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  {status.type === "success"
+                    ? <><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>
+                    : <><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></>
+                  }
                 </svg>
-                Sending...
-              </span>
-            ) : (
-              "Send Reset Link"
+                {status.message}
+              </div>
             )}
-          </button>
-        </form>
 
-        <div className="mt-6 text-center">
-          <Link
-            to="/login"
-            className="text-sm text-purple-600 hover:text-purple-700 font-medium">
-            ← Back to Login
-          </Link>
+            <button type="submit" className="vg-btn vg-btn-primary auth-submit" disabled={isLoading || !email}>
+              {isLoading ? <><span className="vg-spinner" />Sending…</> : "Send reset link"}
+            </button>
+          </form>
+
+          <p className="auth-switch vg-anim-4">
+            <Link to="/login">← Back to sign in</Link>
+          </p>
         </div>
+      </div>
+
+      <div className="vg-auth-side auth-right-panel">
+        <AuthSideContent />
       </div>
     </div>
   );

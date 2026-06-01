@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import "../styles/design-tokens.css";
+import "./HistoryPage.css";
 
 const HistoryPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -14,480 +16,232 @@ const HistoryPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  // Function to format analysis data from API response
   const formatAnalysisData = (analyses) => {
-    if (!analyses || !Array.isArray(analyses)) {
-      return [];
-    }
-
-    return analyses
-      .map((analysis) => {
-        if (!analysis) return null;
-
-        const metadata = analysis.metadata || {};
-
-        // Extract and format the timestamp
-        const uploadDate = analysis.analysis_timestamp
-          ? new Date(analysis.analysis_timestamp)
-          : new Date();
-
-        const formattedDate = uploadDate.toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "short",
-          day: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        }); // Format the result string
-        let confidence = 0;
-        try {
-          confidence = parseFloat(analysis.confidence_score);
-          if (isNaN(confidence)) confidence = 0.5;
-          if (confidence < 0) confidence = 0;
-          if (confidence > 1) confidence = 1;
-        } catch (e) {
-          confidence = 0.5;
-        }
-
-        let resultText = analysis.is_deepfake
-          ? `${Math.round(confidence * 100)}% Fake`
-          : `${Math.round((1 - confidence) * 100)}% Real`;
-
-        // Extract audio details
-        const detailsArray = [];
-
-        // If we have feature details, add them
-        if (analysis.details && analysis.details.feature_scores) {
-          const features = analysis.details.feature_scores;
-
-          if (features.mfcc_score !== undefined) {
-            detailsArray.push({
-              label: "Voice Pattern Analysis",
-              value: features.mfcc_score > 0.5 ? "Artificial" : "Natural",
-              description:
-                features.mfcc_score > 0.5
-                  ? "Patterns indicate potential AI generation"
-                  : "Patterns match typical human speech characteristics",
-            });
-          }
-
-          if (features.spectral_score !== undefined) {
-            detailsArray.push({
-              label: "Frequency Analysis",
-              value: features.spectral_score > 0.5 ? "Abnormal" : "Normal",
-              description:
-                features.spectral_score > 0.5
-                  ? "Unusual frequency distribution detected"
-                  : "Frequency distribution within expected human range",
-            });
-          }
-
-          if (features.temporal_score !== undefined) {
-            detailsArray.push({
-              label: "Temporal Analysis",
-              value: features.temporal_score > 0.5 ? "Irregular" : "Regular",
-              description:
-                features.temporal_score > 0.5
-                  ? "Temporal patterns suggest artificial generation"
-                  : "Natural temporal flow detected in speech",
-            });
-          }
-        }
-
-        // Add default details if none available from API
-        if (detailsArray.length === 0) {
-          detailsArray.push({
-            label: "Overall Analysis",
-            value: analysis.is_deepfake ? "Artificial" : "Natural",
-            description: analysis.is_deepfake
-              ? "AI patterns detected in the audio"
-              : "Natural human voice characteristics detected",
-          });
-        }
-
-        // Safely get values with fallbacks
-        const details = analysis.details || {};
-        let processingTime = null;
-
-        // Handle processing time with proper type checking and error handling
-        if (details.processing_time !== undefined) {
-          try {
-            if (typeof details.processing_time === "string") {
-              processingTime = parseInt(details.processing_time);
-            } else if (typeof details.processing_time === "number") {
-              processingTime = details.processing_time;
-            }
-
-            if (isNaN(processingTime)) {
-              processingTime = null;
-            }
-          } catch (e) {
-            console.error("Error parsing processing time:", e);
-            processingTime = null;
-          }
-        }
-
-        let isAI = analysis.is_deepfake;
-
-        return {
-          id: analysis.id,
-          date: formattedDate,
-          fileName: metadata.filename || "Unknown File",
-          result: resultText,
-          isAI: isAI,
-          confidence: Math.round(confidence * 100),
-          duration: metadata.duration
-            ? `${parseFloat(metadata.duration).toFixed(2)}s`
-            : "Unknown",
-          format: metadata.filename
-            ? metadata.filename.split(".").pop().toUpperCase()
-            : "Unknown",
-          sampleRate: metadata.sample_rate
-            ? `${(parseFloat(metadata.sample_rate) / 1000).toFixed(1)} kHz`
-            : "Unknown",
-          analysisTime:
-            processingTime !== null
-              ? `${processingTime.toFixed(0)} ms`
-              : "Unknown",
-          details: detailsArray,
-          rawData: analysis, // Keep the raw data for reference
-        };
-      })
-      .filter(Boolean); // Remove any null entries
+    if (!Array.isArray(analyses)) return [];
+    return analyses.map((analysis) => {
+      if (!analysis) return null;
+      const metadata = analysis.metadata || {};
+      const uploadDate = analysis.analysis_timestamp ? new Date(analysis.analysis_timestamp) : new Date();
+      const formattedDate = uploadDate.toLocaleDateString("en-US", { year:"numeric", month:"short", day:"numeric", hour:"2-digit", minute:"2-digit" });
+      let confidence = parseFloat(analysis.confidence_score);
+      if (isNaN(confidence) || confidence < 0) confidence = 0;
+      if (confidence > 1) confidence = 1;
+      const detailsArray = [];
+      if (analysis.details?.feature_scores) {
+        const f = analysis.details.feature_scores;
+        if (f.mfcc_score !== undefined) detailsArray.push({ label:"Voice Pattern Analysis", value: f.mfcc_score > 0.5 ? "Artificial" : "Natural", description: f.mfcc_score > 0.5 ? "Patterns indicate potential AI generation" : "Patterns match typical human speech characteristics" });
+        if (f.spectral_score !== undefined) detailsArray.push({ label:"Frequency Analysis", value: f.spectral_score > 0.5 ? "Abnormal" : "Normal", description: f.spectral_score > 0.5 ? "Unusual frequency distribution detected" : "Within expected human range" });
+        if (f.temporal_score !== undefined) detailsArray.push({ label:"Temporal Analysis", value: f.temporal_score > 0.5 ? "Irregular" : "Regular", description: f.temporal_score > 0.5 ? "Temporal patterns suggest artificial generation" : "Natural temporal flow detected" });
+      }
+      if (detailsArray.length === 0) detailsArray.push({ label:"Overall Analysis", value: analysis.is_deepfake ? "Artificial" : "Natural", description: analysis.is_deepfake ? "AI patterns detected" : "Natural human voice characteristics" });
+      const details = analysis.details || {};
+      let processingTime = null;
+      if (details.processing_time !== undefined) {
+        processingTime = typeof details.processing_time === "string" ? parseInt(details.processing_time) : details.processing_time;
+        if (isNaN(processingTime)) processingTime = null;
+      }
+      return {
+        id: analysis.id, date: formattedDate,
+        fileName: metadata.filename || "Unknown File",
+        result: analysis.is_deepfake ? `${Math.round(confidence * 100)}% Fake` : `${Math.round((1 - confidence) * 100)}% Real`,
+        isAI: analysis.is_deepfake,
+        confidence: Math.round(confidence * 100),
+        duration: metadata.duration ? `${parseFloat(metadata.duration).toFixed(2)}s` : "—",
+        format: metadata.filename ? metadata.filename.split(".").pop().toUpperCase() : "—",
+        sampleRate: metadata.sample_rate ? `${(parseFloat(metadata.sample_rate) / 1000).toFixed(1)} kHz` : "—",
+        analysisTime: processingTime !== null ? `${processingTime.toFixed(0)} ms` : "—",
+        details: detailsArray,
+      };
+    }).filter(Boolean);
   };
 
   useEffect(() => {
     const fetchAnalyses = async () => {
       try {
-        if (!user || !user.token) {
-          setError("You must be logged in to view history");
-          setLoading(false);
-          return;
-        }
-
-        // Fetch user's analyses from the API
+        if (!user?.token) { setError("You must be logged in to view history"); setLoading(false); return; }
         const response = await api.getUserAnalyses(user.token);
-
-        if (response.analyses && Array.isArray(response.analyses)) {
-          // Transform API data to match our component's expected format
-          const formattedData = formatAnalysisData(response.analyses);
-          setHistoryData(formattedData);
-        } else {
-          setHistoryData([]);
-        }
-
-        setLoading(false);
+        setHistoryData(response.analyses && Array.isArray(response.analyses) ? formatAnalysisData(response.analyses) : []);
       } catch (err) {
-        console.error("Error fetching analyses:", err);
-        setError("Failed to load analysis history");
-        setLoading(false);
-      }
+        console.error(err); setError("Failed to load analysis history");
+      } finally { setLoading(false); }
     };
-
     fetchAnalyses();
     setSelectedItems([]);
   }, [user]);
 
-  const handleItemSelect = (id) => {
-    setSelectedItems((prev) => {
-      if (prev.includes(id)) {
-        return prev.filter((item) => item !== id);
-      } else {
-        return [...prev, id];
-      }
-    });
-  };
+  const filteredHistory = historyData.filter(item => item.fileName?.toLowerCase().includes(searchTerm.toLowerCase()));
 
-  const handleSelectAll = () => {
-    if (selectedItems.length === filteredHistory.length) {
-      setSelectedItems([]);
-    } else {
-      setSelectedItems(filteredHistory.map((item) => item.id));
-    }
-  };
-
-  const handleDeleteSelected = async () => {
-    if (selectedItems.length === 0) return;
-    setShowDeleteModal(true);
-  };
+  const handleItemSelect = (id) => setSelectedItems(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  const handleSelectAll = () => setSelectedItems(selectedItems.length === filteredHistory.length ? [] : filteredHistory.map(i => i.id));
 
   const confirmDelete = async () => {
     setIsDeleting(true);
     try {
       await api.deleteAnalyses(selectedItems, user.token);
-      setHistoryData((prev) =>
-        prev.filter((item) => !selectedItems.includes(item.id))
-      );
-      setSelectedItems([]);
-      setShowDeleteModal(false);
-    } catch (err) {
-      console.error("Error deleting items:", err);
-      setError("Failed to delete selected items");
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  const getResultColor = (result) => {
-    if (result.includes("Fake")) {
-      return "text-red-500";
-    }
-    return "text-green-500";
+      setHistoryData(prev => prev.filter(item => !selectedItems.includes(item.id)));
+      setSelectedItems([]); setShowDeleteModal(false);
+    } catch { setError("Failed to delete selected items"); }
+    finally { setIsDeleting(false); }
   };
 
   const handleViewDetails = (item) => {
-    // Use the direct route with the ID, which will properly update the URL
-    // This allows users to bookmark or share the result directly
-    if (item.id) {
-      navigate(`/result/${item.id}`);
-    } else if (item.analysis_id) {
-      navigate(`/result/${item.analysis_id}`);
-    } else {
-      navigate("/detailed-analysis", { state: { analysisData: item } });
-    }
+    if (item.id) navigate(`/result/${item.id}`);
+    else if (item.analysis_id) navigate(`/result/${item.analysis_id}`);
+    else navigate("/detailed-analysis", { state: { analysisData: item } });
   };
 
-  // Filter history based on search term
-  const filteredHistory = historyData.filter(
-    (item) =>
-      item.fileName &&
-      item.fileName.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      {/* Delete Confirmation Modal */}
+    <div className="history-page vg-page">
+      {/* Delete modal */}
       {showDeleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white rounded-lg shadow-lg p-8 max-w-sm w-full text-center animate-fade-in">
-            <svg className="mx-auto mb-4 w-12 h-12 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-            <h2 className="text-xl font-semibold mb-2 text-gray-800">Delete {selectedItems.length} selected item{selectedItems.length > 1 ? 's' : ''}?</h2>
-            <p className="text-gray-600 mb-6">This action cannot be undone. Are you sure you want to permanently delete the selected analysis{selectedItems.length > 1 ? 'es' : ''}?</p>
-            <div className="flex justify-center gap-4">
-              <button
-                onClick={confirmDelete}
-                disabled={isDeleting}
-                className="px-5 py-2 rounded-md bg-red-600 hover:bg-red-700 text-white font-medium transition-colors disabled:opacity-60">
-                {isDeleting ? 'Deleting...' : 'Delete'}
-              </button>
-              <button
-                onClick={() => setShowDeleteModal(false)}
-                disabled={isDeleting}
-                className="px-5 py-2 rounded-md bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium transition-colors">
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      <div className="flex flex-wrap justify-between items-center mb-8">
-        <h1 className="text-2xl font-semibold mb-2 sm:mb-0">
-          Analysis History
-        </h1>
-        <div className="flex flex-wrap items-center gap-4">
-          {selectedItems.length > 0 && (
-            <button
-              onClick={handleDeleteSelected}
-              disabled={isDeleting}
-              className="px-4 py-2 rounded-md bg-red-600 hover:bg-red-700 text-white transition-colors flex items-center">
-              {isDeleting ? (
-                <svg
-                  className="animate-spin h-4 w-4 mr-2"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24">
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-              ) : (
-                <svg
-                  className="w-4 h-4 mr-1"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                  />
-                </svg>
-              )}
-              Delete {selectedItems.length} selected
-            </button>
-          )}
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Search files..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-64 px-4 py-2 rounded-full bg-purple-50 focus:outline-none focus:ring-2 focus:ring-purple-500"
-            />
-            <button className="absolute right-3 top-1/2 transform -translate-y-1/2">
-              <svg
-                className="w-5 h-5 text-purple-500"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
+        <div className="history-modal-overlay">
+          <div className="history-modal vg-card">
+            <div className="history-modal-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
               </svg>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {loading ? (
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-700"></div>
-        </div>
-      ) : error ? (
-        <div className="bg-red-50 p-4 rounded-lg text-center text-red-500">
-          <p>{error}</p>
-          {!user && (
-            <button
-              onClick={() => navigate("/login")}
-              className="mt-4 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors">
-              Login to View History
-            </button>
-          )}
-        </div>
-      ) : historyData.length === 0 ? (
-        <div className="bg-gray-50 p-8 rounded-lg text-center">
-          <h3 className="text-xl font-medium text-gray-600 mb-4">
-            No Analysis History Found
-          </h3>
-          <p className="text-gray-500 mb-6">
-            You haven't analyzed any audio files yet or no records were found.
-          </p>
-        </div>
-      ) : (
-        <div>
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="min-w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="w-10 px-3 py-3 text-left">
-                      <input
-                        type="checkbox"
-                        checked={
-                          selectedItems.length === filteredHistory.length &&
-                          filteredHistory.length > 0
-                        }
-                        onChange={handleSelectAll}
-                        className="rounded text-purple-600 focus:ring-purple-500"
-                      />
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Date
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Filename
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Result
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Format
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Duration
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredHistory.map((item, index) => (
-                    <tr
-                      key={item.id || index}
-                      className={`hover:bg-purple-50 transition-colors ${
-                        selectedItems.includes(item.id) ? "bg-purple-50" : ""
-                      }`}>
-                      <td className="px-3 py-4">
-                        <input
-                          type="checkbox"
-                          checked={selectedItems.includes(item.id)}
-                          onChange={() => handleItemSelect(item.id)}
-                          className="rounded text-purple-600 focus:ring-purple-500"
-                        />
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {item.date}
-                      </td>
-                      <td className="px-4 py-4 text-sm text-blue-600 max-w-[15rem] truncate">
-                        <div className="flex items-center">
-                          {item.fileName}
-                        </div>
-                      </td>
-                      <td
-                        className={`px-4 py-4 whitespace-nowrap text-sm font-medium ${
-                          item.isAI ? "text-red-500" : "text-green-500"
-                        }`}>
-                        <div className="flex items-center">
-                          <span
-                            className={`inline-block w-2 h-2 rounded-full mr-2 ${
-                              item.isAI ? "bg-red-500" : "bg-green-500"
-                            }`}></span>
-                          {item.result}
-                        </div>
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {item.format}
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {item.duration}
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button
-                          onClick={() => handleViewDetails(item)}
-                          className="text-purple-600 hover:text-purple-900 mx-2 flex items-center">
-                          <svg
-                            className="w-5 h-5 mr-1"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24">
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth="2"
-                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                            />
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth="2"
-                              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                            />
-                          </svg>
-                          View Details
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            </div>
+            <h3 className="history-modal-title">Delete {selectedItems.length} item{selectedItems.length > 1 ? "s" : ""}?</h3>
+            <p className="history-modal-body">This action cannot be undone.</p>
+            <div className="history-modal-actions">
+              <button onClick={confirmDelete} disabled={isDeleting} className="vg-btn vg-btn-danger">
+                {isDeleting ? <><span className="vg-spinner" />Deleting…</> : "Delete"}
+              </button>
+              <button onClick={() => setShowDeleteModal(false)} disabled={isDeleting} className="vg-btn vg-btn-ghost">Cancel</button>
             </div>
           </div>
         </div>
       )}
+
+      <div className="history-container">
+        {/* Header */}
+        <div className="history-header">
+          <div>
+            <div className="vg-section-eyebrow">Your account</div>
+            <h1 className="history-title">Analysis History</h1>
+          </div>
+          <div className="history-toolbar">
+            {selectedItems.length > 0 && (
+              <button onClick={() => setShowDeleteModal(true)} disabled={isDeleting} className="vg-btn vg-btn-danger">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                </svg>
+                Delete {selectedItems.length}
+              </button>
+            )}
+            <div className="history-search">
+              <svg className="history-search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              <input
+                type="text"
+                className="history-search-input"
+                placeholder="Search files…"
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Content */}
+        {loading ? (
+          <div className="history-state">
+            <span className="vg-spinner vg-spinner-dark" style={{ width: 28, height: 28, borderWidth: 3 }} />
+            <span>Loading history…</span>
+          </div>
+        ) : error ? (
+          <div className="history-state history-state--error">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <span>{error}</span>
+            {!user && <button onClick={() => navigate("/login")} className="vg-btn vg-btn-primary">Sign in</button>}
+          </div>
+        ) : historyData.length === 0 ? (
+          <div className="history-empty vg-card">
+            <div className="history-empty-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+              </svg>
+            </div>
+            <h3 className="history-empty-title">No analyses yet</h3>
+            <p className="history-empty-sub">Upload an audio file to see results here.</p>
+            <button onClick={() => navigate("/upload")} className="vg-btn vg-btn-primary" style={{ marginTop: 4 }}>
+              Upload audio
+            </button>
+          </div>
+        ) : (
+          <div className="history-table-wrap vg-card">
+            <table className="history-table">
+              <thead>
+                <tr>
+                  <th className="history-th history-th--check">
+                    <input type="checkbox"
+                      className="history-checkbox"
+                      checked={selectedItems.length === filteredHistory.length && filteredHistory.length > 0}
+                      onChange={handleSelectAll}
+                    />
+                  </th>
+                  <th className="history-th">Date</th>
+                  <th className="history-th">File</th>
+                  <th className="history-th">Verdict</th>
+                  <th className="history-th">Format</th>
+                  <th className="history-th">Duration</th>
+                  <th className="history-th history-th--right"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredHistory.map((item, idx) => (
+                  <tr
+                    key={item.id || idx}
+                    className={`history-row${selectedItems.includes(item.id) ? " history-row--selected" : ""}`}
+                  >
+                    <td className="history-td history-td--check">
+                      <input type="checkbox"
+                        className="history-checkbox"
+                        checked={selectedItems.includes(item.id)}
+                        onChange={() => handleItemSelect(item.id)}
+                      />
+                    </td>
+                    <td className="history-td history-td--date">{item.date}</td>
+                    <td className="history-td history-td--file">
+                      <div className="history-file-cell">
+                        <div className="history-file-icon">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+                          </svg>
+                        </div>
+                        <span className="history-file-name">{item.fileName}</span>
+                      </div>
+                    </td>
+                    <td className="history-td">
+                      <span className={`vg-badge ${item.isAI ? "vg-badge-fake" : "vg-badge-real"}`}>
+                        <span className="history-verdict-dot" style={{ background: item.isAI ? "var(--error)" : "var(--success)" }} />
+                        {item.result}
+                      </span>
+                    </td>
+                    <td className="history-td history-td--meta">{item.format}</td>
+                    <td className="history-td history-td--meta">{item.duration}</td>
+                    <td className="history-td history-td--action">
+                      <button onClick={() => handleViewDetails(item)} className="history-view-btn">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                        </svg>
+                        View
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="history-table-footer">
+              {filteredHistory.length} result{filteredHistory.length !== 1 ? "s" : ""}
+              {searchTerm && ` matching "${searchTerm}"`}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

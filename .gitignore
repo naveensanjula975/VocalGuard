@@ -1,6 +1,8 @@
 Node.js
 node_modules/
 build/
+.obsidian/
+second-brain/
 
 # Environment variables
 .env
