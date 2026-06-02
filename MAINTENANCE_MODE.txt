@@ -1,0 +1,74 @@
+# Maintenance Mode — Quick Guide
+
+When the backend is down, flip one env flag to show a "Stay tuned" page instead of the broken login / signup forms.
+
+## How it works
+
+```
+frontend/.env
+  VITE_AUTH_MAINTENANCE_MODE=true   ← controls everything
+
+frontend/src/config/featureFlags.js ← reads the flag at build time
+frontend/src/App.jsx                ← routes /login and /signup to MaintenancePage
+frontend/src/pages/MaintenancePage.jsx ← the "Stay tuned" UI
+```
+
+When the flag is `true`, visiting `/login` or `/signup` shows the maintenance page instead of the real form.
+
+---
+
+## Turn maintenance ON
+
+1. Open `frontend/.env`
+2. Set:
+   ```
+   VITE_AUTH_MAINTENANCE_MODE=true
+   ```
+3. Rebuild and deploy (see below).
+
+## Turn maintenance OFF
+
+1. Open `frontend/.env`
+2. Set:
+   ```
+   VITE_AUTH_MAINTENANCE_MODE=false
+   ```
+3. Rebuild and deploy (see below).
+
+---
+
+## Deploy to Firebase Hosting
+
+```bash
+cd frontend
+npm run build
+firebase deploy --only hosting
+```
+
+> **Note:** Vite bakes env vars into the JS bundle at build time.  
+> You must rebuild (`npm run build`) every time you change the flag — a redeploy alone is not enough.
+
+---
+
+## Quick reference
+
+| What you want | `.env` value | After changing |
+|---|---|---|
+| Show maintenance page | `true` | `npm run build` → `firebase deploy --only hosting` |
+| Restore login / signup | `false` | `npm run build` → `firebase deploy --only hosting` |
+
+---
+
+## Files to touch (and nothing else)
+
+- `frontend/.env` — the only file you need to edit.
+- Do **not** edit `featureFlags.js`, `App.jsx`, or `MaintenancePage.jsx` — they are already wired up.
+
+## Rollback in 60 seconds
+
+If you need to revert immediately without a full rebuild, you can use Firebase Hosting's rollback:
+
+```bash
+firebase hosting:channel:list          # find the previous release ID
+firebase hosting:rollback              # rolls back to the previous live release
+```

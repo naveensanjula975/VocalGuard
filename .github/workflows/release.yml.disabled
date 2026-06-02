@@ -1,0 +1,111 @@
+# =============================================================================
+# VocalGuard — Release
+# =============================================================================
+# Triggers: manual dispatch with version bump selector
+#
+# Creates a tagged GitHub Release with an auto-generated changelog.
+# The release tag triggers the deploy workflow via the CI → Deploy chain.
+#
+# Versioning: Semantic Versioning (major.minor.patch)
+# =============================================================================
+
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release (e.g. 1.2.0)"
+        required: true
+        type: string
+      release_type:
+        description: "Release type"
+        required: true
+        default: minor
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write       # needed to create tags and releases
+
+jobs:
+  release:
+    name: "Create Release"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0    # full history for changelog generation
+
+      - name: Validate version format
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "❌ Invalid version format: $VERSION (expected: X.Y.Z)"
+            exit 1
+          fi
+          echo "VERSION=v$VERSION" >> $GITHUB_ENV
+          echo "✅ Version v$VERSION validated"
+
+      - name: Check tag doesn't already exist
+        run: |
+          if git rev-parse "${{ env.VERSION }}" >/dev/null 2>&1; then
+            echo "❌ Tag ${{ env.VERSION }} already exists"
+            exit 1
+          fi
+          echo "✅ Tag ${{ env.VERSION }} is available"
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -z "$LAST_TAG" ]; then
+            COMMITS=$(git log --oneline --no-merges | head -50)
+          else
+            COMMITS=$(git log --oneline --no-merges "$LAST_TAG"..HEAD | head -50)
+          fi
+
+          # Build changelog body
+          cat > changelog.md << 'HEADER'
+          ## What's Changed
+
+          HEADER
+
+          # Categorize commits by conventional commit prefix
+          echo "### 🚀 Features" >> changelog.md
+          echo "$COMMITS" | grep -iE "^[a-f0-9]+ feat" >> changelog.md || echo "_None_" >> changelog.md
+          echo "" >> changelog.md
+
+          echo "### 🐛 Bug Fixes" >> changelog.md
+          echo "$COMMITS" | grep -iE "^[a-f0-9]+ fix" >> changelog.md || echo "_None_" >> changelog.md
+          echo "" >> changelog.md
+
+          echo "### 📦 Other Changes" >> changelog.md
+          echo "$COMMITS" | grep -viE "^[a-f0-9]+ (feat|fix)" >> changelog.md || echo "_None_" >> changelog.md
+          echo "" >> changelog.md
+
+          echo "---" >> changelog.md
+          echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/${LAST_TAG:-initial}...${{ env.VERSION }}" >> changelog.md
+
+      - name: Create Git tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "${{ env.VERSION }}" -m "Release ${{ env.VERSION }}"
+          git push origin "${{ env.VERSION }}"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.VERSION }}
+          name: "VocalGuard ${{ env.VERSION }}"
+          body_path: changelog.md
+          draft: false
+          prerelease: false
+          generate_release_notes: true

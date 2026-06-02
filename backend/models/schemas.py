@@ -1,0 +1,146 @@
+"""
+API request / response schemas (Pydantic models).
+
+These are pure data contracts — no ML or business logic belongs here.
+"""
+
+from __future__ import annotations
+
+from enum import Enum
+from typing import Any
+
+from pydantic import BaseModel, EmailStr, Field, ConfigDict
+
+
+# ---------------------------------------------------------------------------
+# Enums
+# ---------------------------------------------------------------------------
+class AnalysisModel(str, Enum):
+    """Valid model selection for detection endpoints."""
+    standard = "standard"
+    advanced = "advanced"
+    ensemble = "ensemble"
+
+
+# ---------------------------------------------------------------------------
+# Auth
+# ---------------------------------------------------------------------------
+class UserSignUp(BaseModel):
+    email: EmailStr = Field(..., description="A valid email address for the user")
+    password: str = Field(..., min_length=8, description="A strong password of at least 8 characters")
+    username: str = Field(..., min_length=3, max_length=50, description="Display name for the user")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [{"email": "user@example.com", "password": "SecurePassword123!", "username": "audio_expert"}]
+        }
+    )
+
+
+class UserLogin(BaseModel):
+    email: EmailStr = Field(..., description="Registered email address")
+    password: str = Field(..., description="Account password")
+
+
+class PasswordResetRequest(BaseModel):
+    email: EmailStr = Field(..., description="Email address to send the password reset link to")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [{"email": "user@example.com", "password": "SecurePassword123!"}]
+        }
+    )
+
+
+# ---------------------------------------------------------------------------
+# Audio metadata
+# ---------------------------------------------------------------------------
+class AudioMetadataCreate(BaseModel):
+    filename: str
+    file_size: int
+    duration: float
+    sample_rate: int
+
+
+class AudioMetadata(AudioMetadataCreate):
+    id: str
+    user_id: str
+    upload_timestamp: str
+
+
+# ---------------------------------------------------------------------------
+# Analysis
+# ---------------------------------------------------------------------------
+class AnalysisResultCreate(BaseModel):
+    metadata_id: str
+    is_deepfake: bool
+    confidence_score: float
+    features_used: list[str]
+
+
+class AnalysisResult(AnalysisResultCreate):
+    id: str
+    analysis_timestamp: str
+
+
+# ---------------------------------------------------------------------------
+# Result details
+# ---------------------------------------------------------------------------
+class ResultDetailsCreate(BaseModel):
+    analysis_id: str
+    feature_scores: dict[str, float]
+    model_version: str
+    processing_time: float
+
+
+class ResultDetails(ResultDetailsCreate):
+    id: str
+    created_at: str
+
+
+# ---------------------------------------------------------------------------
+# Combined response
+# ---------------------------------------------------------------------------
+class CompleteAnalysis(BaseModel):
+    id: str
+    metadata_id: str
+    is_deepfake: bool
+    confidence_score: float
+    features_used: list[str]
+    analysis_timestamp: str
+    metadata: AudioMetadata | None = None
+    details: ResultDetails | None = None
+
+
+# ---------------------------------------------------------------------------
+# Pagination
+# ---------------------------------------------------------------------------
+class PaginationMeta(BaseModel):
+    """Cursor-based pagination metadata included in list responses."""
+    per_page: int
+    has_next: bool
+    next_cursor: str | None = None
+
+
+class PaginatedAnalysisResponse(BaseModel):
+    """Envelope for paginated analysis list with HATEOAS links."""
+    data: list[dict[str, Any]]
+    pagination: PaginationMeta
+    links: dict[str, Any] = Field(default_factory=dict, alias="_links")
+
+    class Config:
+        populate_by_name = True
+
+
+# ---------------------------------------------------------------------------
+# Delete request
+# ---------------------------------------------------------------------------
+class DeleteAnalysesRequest(BaseModel):
+    """Typed request body for bulk deletion."""
+    ids: list[str] = Field(..., description="List of unique analysis identifiers to permanently delete")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [{"ids": ["123e4567-e89b-12d3-a456-426614174000", "987e6543-e21b-12d3-a456-426614174000"]}]
+        }
+    )

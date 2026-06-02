@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
+import { api } from "../services/api";
 import logo from "../assets/logo.jpg";
 import "../styles/design-tokens.css";
 import "../components/AuthPages.css";
@@ -12,9 +13,10 @@ const ForgotPasswordPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
+    setStatus({ type: "", message: "" });
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      setStatus({ type: "success", message: "Reset link sent — check your inbox." });
+      await api.forgotPassword(email);
+      setStatus({ type: "success", message: "Reset link sent — check your inbox (and spam folder)." });
     } catch {
       setStatus({ type: "error", message: "Failed to send reset link. Please try again." });
     } finally { setIsLoading(false); }

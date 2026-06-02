@@ -1,0 +1,120 @@
+# =============================================================================
+# VocalGuard — Security Scanning
+# =============================================================================
+# Triggers: weekly schedule + every PR to main
+#
+# Jobs:
+#   1. Dependency audit  — npm audit + pip-audit for known CVEs
+#   2. Secret scanning   — trufflehog for leaked credentials
+#   3. SAST              — CodeQL for static analysis
+#
+# Keeps the supply chain clean without slowing down daily development.
+# =============================================================================
+
+name: Security
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"  # Every Monday at 06:00 UTC
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write  # required for CodeQL SARIF upload
+
+jobs:
+  # =========================================================================
+  # 1. Dependency audit
+  # =========================================================================
+  dependency-audit:
+    name: "Dependency Audit"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ----- Frontend -----
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: npm audit (frontend)
+        run: |
+          cd frontend
+          npm audit --audit-level=high --omit=dev || true
+        continue-on-error: true      # advisory — don't block PRs
+
+      # ----- Backend -----
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: pip-audit (backend)
+        run: |
+          pip install pip-audit
+          pip-audit -r backend/requirements.txt --desc --output=pip-audit-report.txt || true
+        continue-on-error: true
+
+      - name: Upload audit reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: audit-reports
+          path: |
+            pip-audit-report.txt
+          retention-days: 30
+
+  # =========================================================================
+  # 2. Secret scanning
+  # =========================================================================
+  secret-scan:
+    name: "Secret Scan"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout (full history for scanning)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: TruffleHog scan
+        uses: trufflesecurity/trufflehog@main
+        with:
+          extra_args: --only-verified
+
+  # =========================================================================
+  # 3. CodeQL static analysis
+  # =========================================================================
+  codeql:
+    name: "CodeQL"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [javascript, python]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Run CodeQL analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"

@@ -20,35 +20,57 @@ const HistoryPage = () => {
     if (!Array.isArray(analyses)) return [];
     return analyses.map((analysis) => {
       if (!analysis) return null;
-      const metadata = analysis.metadata || {};
-      const uploadDate = analysis.analysis_timestamp ? new Date(analysis.analysis_timestamp) : new Date();
-      const formattedDate = uploadDate.toLocaleDateString("en-US", { year:"numeric", month:"short", day:"numeric", hour:"2-digit", minute:"2-digit" });
+
+      // get_user_analyses returns flat merged objects: metadata fields are at
+      // top level alongside analysis_results fields. A nested `metadata` key
+      // may also be present on single-fetch responses — handle both.
+      const meta = analysis.metadata || analysis;
+
+      const uploadDate = analysis.analysis_timestamp || analysis.upload_timestamp
+        ? new Date(analysis.analysis_timestamp || analysis.upload_timestamp)
+        : new Date();
+      const formattedDate = uploadDate.toLocaleDateString("en-US", {
+        year: "numeric", month: "short", day: "numeric",
+        hour: "2-digit", minute: "2-digit",
+      });
+
       let confidence = parseFloat(analysis.confidence_score);
       if (isNaN(confidence) || confidence < 0) confidence = 0;
       if (confidence > 1) confidence = 1;
+
       const detailsArray = [];
-      if (analysis.details?.feature_scores) {
-        const f = analysis.details.feature_scores;
-        if (f.mfcc_score !== undefined) detailsArray.push({ label:"Voice Pattern Analysis", value: f.mfcc_score > 0.5 ? "Artificial" : "Natural", description: f.mfcc_score > 0.5 ? "Patterns indicate potential AI generation" : "Patterns match typical human speech characteristics" });
-        if (f.spectral_score !== undefined) detailsArray.push({ label:"Frequency Analysis", value: f.spectral_score > 0.5 ? "Abnormal" : "Normal", description: f.spectral_score > 0.5 ? "Unusual frequency distribution detected" : "Within expected human range" });
-        if (f.temporal_score !== undefined) detailsArray.push({ label:"Temporal Analysis", value: f.temporal_score > 0.5 ? "Irregular" : "Regular", description: f.temporal_score > 0.5 ? "Temporal patterns suggest artificial generation" : "Natural temporal flow detected" });
-      }
-      if (detailsArray.length === 0) detailsArray.push({ label:"Overall Analysis", value: analysis.is_deepfake ? "Artificial" : "Natural", description: analysis.is_deepfake ? "AI patterns detected" : "Natural human voice characteristics" });
-      const details = analysis.details || {};
+      const featureScores = analysis.details?.feature_scores || {};
+      if (featureScores.mfcc_score !== undefined)
+        detailsArray.push({ label: "Voice Pattern Analysis", value: featureScores.mfcc_score > 0.5 ? "Artificial" : "Natural", description: featureScores.mfcc_score > 0.5 ? "Patterns indicate potential AI generation" : "Patterns match typical human speech characteristics" });
+      if (featureScores.spectral_score !== undefined)
+        detailsArray.push({ label: "Frequency Analysis", value: featureScores.spectral_score > 0.5 ? "Abnormal" : "Normal", description: featureScores.spectral_score > 0.5 ? "Unusual frequency distribution detected" : "Within expected human range" });
+      if (featureScores.temporal_score !== undefined)
+        detailsArray.push({ label: "Temporal Analysis", value: featureScores.temporal_score > 0.5 ? "Irregular" : "Regular", description: featureScores.temporal_score > 0.5 ? "Temporal patterns suggest artificial generation" : "Natural temporal flow detected" });
+      if (detailsArray.length === 0)
+        detailsArray.push({ label: "Overall Analysis", value: analysis.is_deepfake ? "Artificial" : "Natural", description: analysis.is_deepfake ? "AI patterns detected" : "Natural human voice characteristics" });
+
       let processingTime = null;
-      if (details.processing_time !== undefined) {
-        processingTime = typeof details.processing_time === "string" ? parseInt(details.processing_time) : details.processing_time;
+      const pt = analysis.details?.processing_time;
+      if (pt !== undefined) {
+        processingTime = typeof pt === "string" ? parseInt(pt) : pt;
         if (isNaN(processingTime)) processingTime = null;
       }
+
+      // filename may be at top-level (flat merge) or inside meta
+      const filename = meta.filename || analysis.filename || "Unknown File";
+
       return {
-        id: analysis.id, date: formattedDate,
-        fileName: metadata.filename || "Unknown File",
-        result: analysis.is_deepfake ? `${Math.round(confidence * 100)}% Fake` : `${Math.round((1 - confidence) * 100)}% Real`,
+        id: analysis.id,
+        date: formattedDate,
+        fileName: filename,
+        result: analysis.is_deepfake
+          ? `${Math.round(confidence * 100)}% Fake`
+          : `${Math.round((1 - confidence) * 100)}% Real`,
         isAI: analysis.is_deepfake,
         confidence: Math.round(confidence * 100),
-        duration: metadata.duration ? `${parseFloat(metadata.duration).toFixed(2)}s` : "—",
-        format: metadata.filename ? metadata.filename.split(".").pop().toUpperCase() : "—",
-        sampleRate: metadata.sample_rate ? `${(parseFloat(metadata.sample_rate) / 1000).toFixed(1)} kHz` : "—",
+        duration: meta.duration ? `${parseFloat(meta.duration).toFixed(2)}s` : "—",
+        format: filename !== "Unknown File" ? filename.split(".").pop().toUpperCase() : "—",
+        sampleRate: meta.sample_rate ? `${(parseFloat(meta.sample_rate) / 1000).toFixed(1)} kHz` : "—",
         analysisTime: processingTime !== null ? `${processingTime.toFixed(0)} ms` : "—",
         details: detailsArray,
       };
@@ -60,7 +82,9 @@ const HistoryPage = () => {
       try {
         if (!user?.token) { setError("You must be logged in to view history"); setLoading(false); return; }
         const response = await api.getUserAnalyses(user.token);
-        setHistoryData(response.analyses && Array.isArray(response.analyses) ? formatAnalysisData(response.analyses) : []);
+        // Backend returns { data: [...], pagination: {...} }
+        const items = response.data ?? response.analyses ?? [];
+        setHistoryData(formatAnalysisData(items));
       } catch (err) {
         console.error(err); setError("Failed to load analysis history");
       } finally { setLoading(false); }

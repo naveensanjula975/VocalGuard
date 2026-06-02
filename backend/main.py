@@ -1,349 +1,118 @@
-import os
-import sys
-import tempfile
-import requests
-from pathlib import Path
-from dotenv import load_dotenv
+"""
+VocalGuard API — application entry-point.
 
-from fastapi import FastAPI, File, UploadFile, Depends, HTTPException, Body
-from fastapi.responses import JSONResponse
+This file is the **composition root**: it wires together configuration,
+middleware, exception handlers, and versioned route modules.  It
+contains zero business logic.
+
+URL structure:
+    /v1/auth/…        – authentication
+    /v1/analyses/…    – core CRUD + detection
+    /v1/demo/…        – public trial endpoints
+    /v1/debug/…       – development utilities
+    /…                – legacy backward-compat shims (hidden from docs)
+"""
+
+from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import OAuth2PasswordBearer
 
-# Add the parent directory to system path to enable relative imports
-current_dir = Path(__file__).parent
-sys.path.insert(0, str(current_dir))
-
-# Import Firebase configuration and services
+from config import ALLOWED_ORIGINS, API_V1_PREFIX, FIREBASE_WEB_API_KEY
+from exceptions import register_exception_handlers
 from services.firebase_config import initialize_firebase
-from services.database_service import DatabaseService
-from firebase_admin import auth
+from asgi_correlation_id import CorrelationIdMiddleware
+from rate_limiter import limiter
 
-# Import deepfake detection functionality
-from core.detect_deepfake import detect_deepfake
+# ---------------------------------------------------------------------------
+# Validate critical config (fail-fast)
+# ---------------------------------------------------------------------------
+if not FIREBASE_WEB_API_KEY:
+    raise ValueError(
+        "FIREBASE_WEB_API_KEY environment variable must be set. "
+        "Copy .env.example → .env and fill in your Firebase credentials."
+    )
 
-# Import data models
-from models.models import UserSignUp, UserLogin
+# ---------------------------------------------------------------------------
+# Create app
+# ---------------------------------------------------------------------------
+app = FastAPI(
+    title="VocalGuard API",
+    description="AI-powered audio deepfake detection",
+    version="1.0.0",
+)
 
-# Initialize the FastAPI app
-app = FastAPI()
+# ---------------------------------------------------------------------------
+# Middleware & State
+# ---------------------------------------------------------------------------
+app.state.limiter = limiter
 
-# Initialize Firebase
-initialize_firebase()
-
-# Configure CORS middleware
+app.add_middleware(CorrelationIdMiddleware)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify the exact origins
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Load environment variables from .env file
+# ---------------------------------------------------------------------------
+# Firebase
+# ---------------------------------------------------------------------------
+initialize_firebase()
 
-# Load .env file
-load_dotenv()
+# ---------------------------------------------------------------------------
+# Exception handlers
+# ---------------------------------------------------------------------------
+register_exception_handlers(app)
 
-# Firebase Web API Key - get from environment variable
-FIREBASE_WEB_API_KEY = os.getenv("FIREBASE_WEB_API_KEY")
+# ---------------------------------------------------------------------------
+# Versioned routes — /v1/…
+# ---------------------------------------------------------------------------
+from routes.auth import router as auth_router            # noqa: E402
+from routes.analyses import router as analyses_router    # noqa: E402
+from routes.demo import router as demo_router            # noqa: E402
+from routes.debug import router as debug_router          # noqa: E402
+from routes.explain import router as explain_router      # noqa: E402
 
-# Check if the API key is available
-if not FIREBASE_WEB_API_KEY:
-    print("WARNING: FIREBASE_WEB_API_KEY environment variable is not set!")
-    print("Please copy .env.example to .env and update it with your Firebase credentials")
-    print("You can find these credentials in your Firebase console")
-    raise ValueError("FIREBASE_WEB_API_KEY environment variable must be set")
+v1 = APIRouter(prefix=API_V1_PREFIX)
+v1.include_router(auth_router)
+v1.include_router(analyses_router)
+v1.include_router(demo_router)
+v1.include_router(debug_router)
+v1.include_router(explain_router)    # POST /api/v1/explain
 
-# Configure OAuth2
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+app.include_router(v1)
 
-# Verify token middleware
-async def verify_token(authorization: str = Depends(oauth2_scheme)):
-    try:
-        token = authorization.replace("Bearer ", "")
-          # Verify token with Firebase
-        try:
-            decoded_token = auth.verify_id_token(token)
-            return decoded_token
-        except Exception as e:
-            # Log error but don't expose details in production
-            print(f"Firebase token verification error: {str(e)}")
-            raise HTTPException(
-                status_code=401,
-                detail=f"FIREBASE_ERROR: Invalid token: {str(e)}"
-            )
-    except Exception as e:
-        print(f"General token verification error: {str(e)}")
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid authentication credentials"
-        )
+# ---------------------------------------------------------------------------
+# Legacy backward-compat shims — old paths (hidden from OpenAPI docs)
+# ---------------------------------------------------------------------------
+from routes.legacy import router as legacy_router        # noqa: E402
 
-@app.get("/")
+app.include_router(legacy_router)
+
+# ---------------------------------------------------------------------------
+# Health
+# ---------------------------------------------------------------------------
+
+@app.get("/", tags=["health"])
 async def root():
-    return {"message": "Welcome to VocalGuard API"}
+    return {"message": "Welcome to VocalGuard API", "version": "1.0.0", "docs": "/docs"}
 
-@app.post("/detect-deepfake/")
-async def detect_deepfake_endpoint(
-    file: UploadFile = File(...),
-    token_data: dict = Depends(verify_token)
-):
-    """
-    Endpoint to detect if an audio file is a deepfake and store results
-    """
-    user_id = token_data["uid"]
-    
-    # Save the uploaded file to a temporary location
-    temp_file = tempfile.NamedTemporaryFile(delete=False)
-    try:
-        contents = await file.read()
-        with open(temp_file.name, 'wb') as f:
-            f.write(contents)
-              # Extract audio info
-        filename = file.filename
-          # Process the file with our deepfake detection logic and store results
-        result = detect_deepfake(temp_file.name, user_id=user_id, store_results=True, filename=filename)
-        
-        # Ensure filename is in the result
-        result["filename"] = filename
-        
-        return result
-    except Exception as e:
-        print(f"Error processing audio: {str(e)}")
-        return JSONResponse(
-            status_code=500,
-            content={"error": f"Failed to process audio: {str(e)}"}
-        )
-    finally:
-        # Clean up the temporary file
-        temp_file.close()
-        os.unlink(temp_file.name)
-        
-@app.post("/detect-deepfake-advanced/")
-async def detect_deepfake_advanced_endpoint(
-    file: UploadFile = File(...),
-    token_data: dict = Depends(verify_token)
-):
-    """
-    Advanced endpoint using Wav2Vec2 model to detect if an audio file is a deepfake
-    """
-    user_id = token_data["uid"]
-    
-    # Save the uploaded file to a temporary location
-    temp_file = tempfile.NamedTemporaryFile(delete=False)
-    try:
-        contents = await file.read()
-        with open(temp_file.name, 'wb') as f:
-            f.write(contents)
-              # Extract audio info
-        filename = file.filename
-          # Process the file with our deepfake detection logic with Wav2Vec2 and store results
-        result = detect_deepfake(temp_file.name, user_id=user_id, store_results=True, filename=filename)
-          # Add filename and model info to result
-        result["filename"] = filename
-        result["model_used"] = "wav2vec2"
-        
-        return result
-    except Exception as e:
-        print(f"Error processing audio with Wav2Vec2: {str(e)}")
-        return JSONResponse(
-            status_code=500,
-            content={"error": f"Failed to process audio with Wav2Vec2: {str(e)}"}
-        )
-    finally:
-        temp_file.close()
-        os.unlink(temp_file.name)
 
-@app.post("/signup")
-async def signup(user_data: UserSignUp):
-    try:
-        # Create user in Firebase
-        user = auth.create_user(
-            email=user_data.email,
-            password=user_data.password,
-            display_name=user_data.username
-        )
-        
-        # Create custom token
-        custom_token = auth.create_custom_token(user.uid)
-        
-        return {
-            "message": "User created successfully",
-            "user_id": user.uid,
-            "token": custom_token.decode('utf-8'),
-            "username": user_data.username
-        }
-    except Exception as e:
-        print(f"Signup error: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+@app.get("/health", tags=["health"])
+async def health():
+    return {"status": "ok"}
 
-@app.post("/login")
-async def login(user_data: UserLogin):
-    try:
-        # Firebase Auth REST API endpoint for email/password sign-in
-        url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={FIREBASE_WEB_API_KEY}"
-        
-        # Request body
-        payload = {
-            "email": user_data.email,
-            "password": user_data.password,
-            "returnSecureToken": True
-        }
-          # Make request to Firebase Auth
-        response = requests.post(url, json=payload)
-        
-        # Check if the response was successful
-        if not response.ok:
-            raise HTTPException(
-                status_code=response.status_code,
-                detail=f"FIREBASE_ERROR: Authentication failed with HTTP {response.status_code}"
-            )
-        
-        firebase_response = response.json()
-          # Check for errors in the Firebase response
-        if "error" in firebase_response:
-            error_message = firebase_response["error"]["message"]
-            raise HTTPException(
-                status_code=401,
-                detail=f"FIREBASE_ERROR: {error_message}"
-            )
-        
-        # Verify the required fields are in the response
-        if "idToken" not in firebase_response or "localId" not in firebase_response:
-            raise HTTPException(
-                status_code=500,
-                detail="Invalid response from authentication service"
-            )
-        
-        try:            # Get user data from Firebase Admin SDK
-            user = auth.get_user_by_email(user_data.email)
-            
-            return {
-                "message": "Login successful",
-                "user_id": user.uid,
-                "token": firebase_response["idToken"],
-                "username": user.display_name or user.email.split('@')[0],  # Fallback to email prefix if no display name
-                "email": user.email
-            }
-        except Exception as user_fetch_error:
-            print(f"Error fetching user data: {user_fetch_error}")
-            # Even if we can't get the user data, we can still return the token
-            return {
-                "message": "Login successful",
-                "user_id": firebase_response["localId"],
-                "token": firebase_response["idToken"],
-                "username": user_data.email.split('@')[0],  # Use email prefix as username
-                "email": user_data.email
-            }
-    except HTTPException as he:
-        raise he
-    except Exception as e:
-        print(f"Login error: {str(e)}")
-        raise HTTPException(status_code=401, detail="Invalid credentials")
 
-# Protected route example
-@app.get("/protected")
-async def protected_route(token_data=Depends(verify_token)):
-    return {"message": "This is a protected route", "user_id": token_data["uid"]}
+@app.get("/ready", tags=["health"])
+async def ready():
+    """Liveness probe for container orchestration."""
+    return {"status": "ready"}
 
-# Database-related endpoints
-@app.get("/user/analyses")
-async def get_user_analyses(token_data=Depends(verify_token)):
-    """
-    Get all analyses for the currently authenticated user
-    """
-    user_id = token_data["uid"]
-    
-    try:
-        db_service = DatabaseService()
-        analyses = db_service.get_user_analyses(user_id)
-        return {"analyses": analyses}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve analyses: {str(e)}")
 
-@app.get("/analyses/{analysis_id}")
-async def get_analysis_by_id(analysis_id: str, token_data=Depends(verify_token)):
-    """
-    Get a specific analysis by ID
-    """
-    try:
-        db_service = DatabaseService()
-        analysis = db_service.get_analysis(analysis_id)
-        
-        if not analysis:
-            raise HTTPException(status_code=404, detail="Analysis not found")
-            
-        # Check if the user has permission to access this analysis
-        if "metadata" in analysis and analysis["metadata"]["user_id"] != token_data["uid"]:
-            raise HTTPException(status_code=403, detail="You don't have permission to access this analysis")
-            
-        return analysis
-    except HTTPException as he:
-        raise he
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve analysis: {str(e)}")
-
-@app.post("/generate-dummy-data")
-async def generate_dummy_data(token_data=Depends(verify_token)):
-    """
-    Generate dummy data for the current user for demonstration purposes
-    """
-    user_id = token_data["uid"]
-    
-    try:
-        db_service = DatabaseService()
-        analysis_ids = db_service.create_dummy_data(user_id)
-        return {"message": f"Generated {len(analysis_ids)} dummy analyses", "analysis_ids": analysis_ids}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to generate dummy data: {str(e)}")
-
-@app.post("/detect-deepfake-demo")
-async def detect_deepfake_demo(file: UploadFile = File(...)):
-    """
-    Public endpoint to detect deepfakes without authentication (for demo purposes)
-    """
-    # Save the uploaded file to a temporary location
-    temp_file = tempfile.NamedTemporaryFile(delete=False)
-    try:
-        contents = await file.read()
-        with open(temp_file.name, 'wb') as f:
-            f.write(contents)
-            
-        # Process the file with our deepfake detection logic without storing results
-        result = detect_deepfake(temp_file.name, store_results=False)
-        return result
-    except Exception as e:
-        return JSONResponse(
-            status_code=500,
-            content={"error": f"Failed to process audio: {str(e)}"}
-        )
-    finally:
-        # Clean up the temporary file
-        temp_file.close()
-        os.unlink(temp_file.name)
-
-@app.post("/analyses/delete")
-async def delete_analyses(
-    data: dict = Body(...),
-    token_data=Depends(verify_token)
-):
-    """
-    Delete multiple analyses by their IDs for the authenticated user.
-    """
-    user_id = token_data["uid"]
-    analysis_ids = data.get("analysis_ids", [])
-    if not isinstance(analysis_ids, list) or not analysis_ids:
-        raise HTTPException(status_code=400, detail="No analysis IDs provided")
-    try:
-        db_service = DatabaseService()
-        # Optionally, check ownership of each analysis before deletion
-        # For now, rely on db_service to handle permissions if needed
-        results = db_service.delete_multiple_analyses(analysis_ids)
-        return {"deleted": results}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to delete analyses: {str(e)}")
-
+# ---------------------------------------------------------------------------
+# Dev entry-point
+# ---------------------------------------------------------------------------
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000)

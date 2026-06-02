@@ -129,7 +129,7 @@ export const api = {
 
     getUserAnalyses: async (token) => {
         try {
-            const response = await fetch(`${API_BASE_URL}/user/analyses`, {
+            const response = await fetch(`${API_BASE_URL}/api/v1/analyses`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -138,7 +138,7 @@ export const api = {
 
             if (!response.ok) {
                 const error = await response.json();
-                throw new Error(error.detail || 'Failed to retrieve analyses');
+                throw new Error(error.error || error.detail || 'Failed to retrieve analyses');
             }
 
             return response.json();
@@ -149,7 +149,7 @@ export const api = {
 
     getAnalysisById: async (analysisId, token) => {
         try {
-            const response = await fetch(`${API_BASE_URL}/analyses/${analysisId}`, {
+            const response = await fetch(`${API_BASE_URL}/api/v1/analyses/${analysisId}`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -187,15 +187,28 @@ export const api = {
         }
     },
 
+    forgotPassword: async (email) => {
+        const response = await fetch(`${API_BASE_URL}/api/v1/auth/forgot-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.detail || 'Failed to send reset email');
+        }
+        return data;
+    },
+
     deleteAnalyses: async (analysisIds, token) => {
         try {
-            const response = await fetch(`${API_BASE_URL}/analyses/delete`, {
-                method: 'POST',
+            const response = await fetch(`${API_BASE_URL}/api/v1/analyses`, {
+                method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ analysis_ids: analysisIds }),
+                body: JSON.stringify({ ids: analysisIds }),
             });
 
             if (!response.ok) {
