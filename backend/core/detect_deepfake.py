@@ -22,6 +22,7 @@ from config import (
     ANALYSIS_TYPE_TO_MODEL,
     ENSEMBLE_TRANSFORMER_WEIGHT,
     ENSEMBLE_WAV2VEC2_WEIGHT,
+    HF_TOKEN,
     MODEL_DIR,
     MODEL_VERSION,
 )
@@ -37,7 +38,6 @@ logger = get_logger(__name__)
 # ---------------------------------------------------------------------------
 from pathlib import Path
 from huggingface_hub import snapshot_download
-from config import HF_TOKEN
 from transformers import Wav2Vec2FeatureExtractor, AutoModelForAudioClassification
 import soundfile as sf
 import torchaudio
@@ -62,6 +62,7 @@ def _resolve_model_path(model_dir) -> str:
         repo_id=repo_id,
         local_dir=local_dir,
         token=HF_TOKEN or None,
+        ignore_patterns=["*.onnx", "flax_model*", "tf_model*", "rust_model*"],
     )
     logger.info("Model download complete")
     return local_dir
@@ -74,11 +75,9 @@ class DeepfakeAudioDetector:
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         logger.info("DeepfakeAudioDetector using device: %s", self.device)
 
-        local_path = _resolve_model_path(model_path)
-
-        self.feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(local_path)
+        self.feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(model_path)
         self.model = AutoModelForAudioClassification.from_pretrained(
-            local_path,
+            model_path,
             use_safetensors=True,
             torch_dtype=torch.float16 if self.device.type == "cpu" else torch.float32,
             low_cpu_mem_usage=True,
@@ -112,7 +111,7 @@ class DeepfakeAudioDetector:
     # ----- inference -----
     def detect(self, audio_path: str, threshold: float = 0.5) -> dict:
         inputs = self.preprocess_audio(audio_path)
-        inputs = {k: v.to(self.device) for k, v in inputs.items()}
+        inputs = {k: v.to(self.device, dtype=self.model.dtype) for k, v in inputs.items()}
 
         with torch.no_grad():
             logits = self.model(**inputs).logits
