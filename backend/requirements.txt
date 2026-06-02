@@ -62,6 +62,7 @@ librosa==0.10.1
 soundfile==0.13.1
 soxr==0.5.0.post1
 audioread==3.0.1
+torchaudio==2.6.0
 
 # ML Infrastructure & Tools
 pillow==12.2.0
