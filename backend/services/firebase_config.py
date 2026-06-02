@@ -40,7 +40,7 @@ def initialize_firebase() -> None:
     b64 = os.getenv("FIREBASE_SERVICE_ACCOUNT_JSON", "")
     if b64:
         try:
-            json_bytes = base64.b64decode(b64)
+            json_bytes = base64.b64decode(b64, validate=True)
             service_account_info = json.loads(json_bytes)
             cred = credentials.Certificate(service_account_info)
             firebase_admin.initialize_app(cred)
@@ -61,6 +61,8 @@ def initialize_firebase() -> None:
             + ", ".join(str(p) for p in _KEY_SEARCH_PATHS)
         )
 
-    cred = credentials.Certificate(str(key_path))
+    with open(key_path) as f:
+        service_account_info = json.load(f)
+    cred = credentials.Certificate(service_account_info)
     firebase_admin.initialize_app(cred)
     logger.info("Firebase initialised from file: %s", key_path.name)
