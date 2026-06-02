@@ -15,8 +15,9 @@ from dotenv import load_dotenv
 # ---------------------------------------------------------------------------
 BASE_DIR = Path(__file__).resolve().parent.parent  # …/backend
 _model_dir_env = os.getenv("MODEL_DIR", "")
+MODEL_DIR: str | Path
 if _model_dir_env and Path(_model_dir_env).exists():
-    MODEL_DIR: str | Path = Path(_model_dir_env)
+    MODEL_DIR = Path(_model_dir_env)
 elif _model_dir_env:
     # Treat as Hugging Face repo ID (e.g. "user/vocalguard-wav2vec2")
     MODEL_DIR = _model_dir_env
