@@ -14,7 +14,16 @@ from dotenv import load_dotenv
 # Paths
 # ---------------------------------------------------------------------------
 BASE_DIR = Path(__file__).resolve().parent.parent  # …/backend
-MODEL_DIR = BASE_DIR / "models" / "deepfake_audio_model"
+_model_dir_env = os.getenv("MODEL_DIR", "")
+if _model_dir_env and Path(_model_dir_env).exists():
+    MODEL_DIR: str | Path = Path(_model_dir_env)
+elif _model_dir_env:
+    # Treat as Hugging Face repo ID (e.g. "user/vocalguard-wav2vec2")
+    MODEL_DIR = _model_dir_env
+else:
+    MODEL_DIR = BASE_DIR / "models" / "deepfake_audio_model"
+
+HF_TOKEN: str = os.getenv("HF_TOKEN", "")
 
 # ---------------------------------------------------------------------------
 # Environment
