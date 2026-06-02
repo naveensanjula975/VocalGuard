@@ -35,9 +35,36 @@ logger = get_logger(__name__)
 # ---------------------------------------------------------------------------
 # Wav2Vec2 classifier wrapper (unchanged public surface)
 # ---------------------------------------------------------------------------
+from pathlib import Path
+from huggingface_hub import snapshot_download
+from config import HF_TOKEN
 from transformers import Wav2Vec2FeatureExtractor, AutoModelForAudioClassification
 import soundfile as sf
 import torchaudio
+
+
+def _resolve_model_path(model_dir) -> str:
+    """Return a local filesystem path to model files.
+
+    If model_dir is already a local directory, returns it as-is.
+    If it looks like a HF repo ID (contains '/'), downloads to /tmp/hf_model/
+    and returns that path.
+    """
+    if isinstance(model_dir, Path) and model_dir.exists():
+        return str(model_dir)
+    if isinstance(model_dir, str) and Path(model_dir).exists():
+        return model_dir
+    # Treat as HF Hub repo ID
+    repo_id = str(model_dir)
+    local_dir = "/tmp/hf_model"
+    logger.info("Downloading model from HF Hub: %s -> %s", repo_id, local_dir)
+    snapshot_download(
+        repo_id=repo_id,
+        local_dir=local_dir,
+        token=HF_TOKEN or None,
+    )
+    logger.info("Model download complete")
+    return local_dir
 
 
 class DeepfakeAudioDetector:
@@ -47,9 +74,14 @@ class DeepfakeAudioDetector:
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         logger.info("DeepfakeAudioDetector using device: %s", self.device)
 
-        self.feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(model_path)
+        local_path = _resolve_model_path(model_path)
+
+        self.feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(local_path)
         self.model = AutoModelForAudioClassification.from_pretrained(
-            model_path, use_safetensors=True
+            local_path,
+            use_safetensors=True,
+            torch_dtype=torch.float16 if self.device.type == "cpu" else torch.float32,
+            low_cpu_mem_usage=True,
         ).to(self.device)
 
         self.id2label: dict[int, str] = getattr(
@@ -112,12 +144,14 @@ class DeepfakeAudioDetector:
 @lru_cache(maxsize=1)
 def get_wav2vec2_detector() -> DeepfakeAudioDetector:
     logger.info("Lazy-loading Wav2Vec2 detector into memory...")
-    return DeepfakeAudioDetector(str(MODEL_DIR))
+    local_path = _resolve_model_path(MODEL_DIR)
+    return DeepfakeAudioDetector(local_path)
 
 @lru_cache(maxsize=1)
 def get_transformer_detector() -> TransformerDeepfakeDetector:
     logger.info("Lazy-loading Transformer detector into memory...")
-    return TransformerDeepfakeDetector(str(MODEL_DIR))
+    local_path = _resolve_model_path(MODEL_DIR)
+    return TransformerDeepfakeDetector(local_path)
 
 # Result cache (cache size 100 items ≈ avoid memory leak)
 _RESULT_CACHE = LRUCache(maxsize=100)
