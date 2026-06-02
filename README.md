@@ -188,6 +188,13 @@ npm run build
 firebase deploy
 ```
 
+Before deploying the frontend, set these Vite env values for the production build:
+
+- `VITE_API_BASE_URL` should point to the deployed backend, not `http://localhost:8000`.
+- `VITE_AUTH_MAINTENANCE_MODE` should be `false` unless you want login and signup to stay blocked.
+
+If you need the temporary maintenance screen again later, flip `VITE_AUTH_MAINTENANCE_MODE` back to `true`, rebuild, and redeploy.
+
 ## 📚 API Documentation
 
 ### Authentication Endpoints

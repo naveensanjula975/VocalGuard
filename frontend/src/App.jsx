@@ -14,16 +14,18 @@ import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import SignupPage from "./pages/SignupPage";
 import HistoryPage from "./pages/HistoryPage";
 import LoginPage from "./pages/LoginPage";
+import MaintenancePage from "./pages/MaintenancePage";
 import Navbar from "./components/Navbar";
 import UploadBox from "./components/UploadBox";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ProfilePage from "./pages/ProfilePage";
 import Result from "./components/Result";
 import DetailedAnalysisPage from "./pages/DetailedAnalysisPage";
+import { isAuthMaintenanceMode } from "./config/featureFlags";
 
 const AppContent = () => {
   const location = useLocation();
-  const isAuthPage = ["/login", "/forgot-password", "/signup"].includes(
+  const isAuthPage = ["/login", "/forgot-password", "/signup", "/maintenance"].includes(
     location.pathname
   );
 
@@ -33,8 +35,15 @@ const AppContent = () => {
       <main className="flex-1 w-full bg-gray-50">
         <Routes>
           <Route path="/" element={<HomePage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/signup" element={<SignupPage />} />
+          <Route
+            path="/login"
+            element={isAuthMaintenanceMode ? <MaintenancePage /> : <LoginPage />}
+          />
+          <Route
+            path="/signup"
+            element={isAuthMaintenanceMode ? <MaintenancePage /> : <SignupPage />}
+          />
+          <Route path="/maintenance" element={<MaintenancePage />} />
           <Route path="/about" element={<AboutUsPage />} />
           <Route
             path="/upload"
