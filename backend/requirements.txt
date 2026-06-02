@@ -19,10 +19,10 @@ sniffio==1.3.1
 # Authentication & Security
 PyJWT==2.12.0
 python-jose==3.4.0
-cryptography==46.0.6
-ecdsa==0.19.1
+cryptography==46.0.7
+ecdsa==0.19.2
 rsa==4.9
-pyasn1==0.4.8
+pyasn1==0.6.3
 pyasn1_modules==0.4.1
 
 # Firebase & Google Cloud
@@ -44,7 +44,7 @@ protobuf==5.29.6
 
 # Machine Learning - Core
 torch==2.6.0
-transformers==4.53.0
+transformers==5.0.0rc3
 datasets==2.17.0
 safetensors==0.4.2
 huggingface_hub>=0.23.0
@@ -73,10 +73,10 @@ llvmlite==0.44.0
 pydantic==2.10.6
 pydantic_core==2.27.2
 email_validator==2.2.0
-python-multipart==0.0.20
+python-multipart==0.0.27
 
 # Configuration & Environment
-python-dotenv==1.1.0
+python-dotenv==1.2.2
 PyYAML==6.0.2
 
 # CLI & Terminal
@@ -106,7 +106,7 @@ mdurl==0.1.2
 dnspython==2.7.0
 certifi==2025.1.31
 charset-normalizer==3.4.1
-idna==3.10
+idna==3.15
 
 # Rate Limiting & Middleware
 slowapi==0.1.9
