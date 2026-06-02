@@ -44,13 +44,10 @@ protobuf==5.29.6
 
 # Machine Learning - Core
 torch==2.6.0
-torchvision==0.21.0
-torchaudio==2.6.0
-tensorflow==2.19.0
-keras==3.9.0
 transformers==4.53.0
 datasets==2.17.0
 safetensors==0.4.2
+huggingface_hub>=0.23.0
 
 # Machine Learning - Scientific
 numpy==1.26.3
@@ -67,9 +64,6 @@ soxr==0.5.0.post1
 audioread==3.0.1
 
 # ML Infrastructure & Tools
-tensorboard==2.19.0
-tensorboard-data-server==0.7.2
-h5py==3.13.0
 pillow==12.2.0
 numba==0.61.0
 llvmlite==0.44.0
@@ -135,21 +129,6 @@ decorator==5.2.1
 six==1.17.0
 wrapt==1.17.2
 lazy_loader==0.4
-
-
-# TensorFlow Dependencies
-absl-py==2.2.0
-astunparse==1.6.3
-flatbuffers==25.2.10
-gast==0.6.0
-google-pasta==0.2.0
-keras==3.9.0
-libclang==18.1.1
-ml_dtypes==0.5.1
-namex==0.0.8
-opt_einsum==3.4.0
-optree==0.14.1
-termcolor==2.5.0
 
 
 # Build & Package Tools
