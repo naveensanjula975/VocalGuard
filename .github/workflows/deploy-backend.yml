@@ -23,17 +23,24 @@ jobs:
           docker push registry.heroku.com/${{ secrets.HEROKU_APP_NAME }}/web
 
       - name: Release on Heroku
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+          HEROKU_APP_NAME: ${{ secrets.HEROKU_APP_NAME }}
         run: |
-          curl -n -X PATCH https://api.heroku.com/apps/${{ secrets.HEROKU_APP_NAME }}/formation \
+          IMAGE_ID=$(docker inspect "registry.heroku.com/${HEROKU_APP_NAME}/web" --format='{{.Id}}')
+          curl -f -n -X PATCH "https://api.heroku.com/apps/${HEROKU_APP_NAME}/formation" \
             -H "Content-Type: application/json" \
             -H "Accept: application/vnd.heroku+json; version=3.docker-releases" \
-            -H "Authorization: Bearer ${{ secrets.HEROKU_API_KEY }}" \
-            -d '{"updates":[{"type":"web","docker_image":"'"$(docker inspect registry.heroku.com/${{ secrets.HEROKU_APP_NAME }}/web --format={{.Id}})"'"}]}'
+            -H "Authorization: Bearer ${HEROKU_API_KEY}" \
+            -d "{\"updates\":[{\"type\":\"web\",\"docker_image\":\"${IMAGE_ID}\"}]}"
 
       - name: Scale to Standard-2X dyno
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+          HEROKU_APP_NAME: ${{ secrets.HEROKU_APP_NAME }}
         run: |
-          curl -n -X PATCH https://api.heroku.com/apps/${{ secrets.HEROKU_APP_NAME }}/formation/web \
+          curl -f -n -X PATCH "https://api.heroku.com/apps/${HEROKU_APP_NAME}/formation/web" \
             -H "Content-Type: application/json" \
             -H "Accept: application/vnd.heroku+json; version=3" \
-            -H "Authorization: Bearer ${{ secrets.HEROKU_API_KEY }}" \
+            -H "Authorization: Bearer ${HEROKU_API_KEY}" \
             -d '{"quantity":1,"size":"Standard-2X"}'
