@@ -41,6 +41,10 @@ class UserLogin(BaseModel):
     email: EmailStr = Field(..., description="Registered email address")
     password: str = Field(..., description="Account password")
 
+
+class PasswordResetRequest(BaseModel):
+    email: EmailStr = Field(..., description="Email address to send the password reset link to")
+
     model_config = ConfigDict(
         json_schema_extra={
             "examples": [{"email": "user@example.com", "password": "SecurePassword123!"}]

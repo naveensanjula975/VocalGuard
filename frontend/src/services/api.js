@@ -187,6 +187,19 @@ export const api = {
         }
     },
 
+    forgotPassword: async (email) => {
+        const response = await fetch(`${API_BASE_URL}/api/v1/auth/forgot-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.detail || 'Failed to send reset email');
+        }
+        return data;
+    },
+
     deleteAnalyses: async (analysisIds, token) => {
         try {
             const response = await fetch(`${API_BASE_URL}/api/v1/analyses`, {

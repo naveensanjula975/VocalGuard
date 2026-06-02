@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from config import FIREBASE_WEB_API_KEY
 from dependencies import get_current_user
 from logger import get_logger
-from models.schemas import UserSignUp, UserLogin
+from models.schemas import UserSignUp, UserLogin, PasswordResetRequest
 
 from firebase_admin import auth
 
@@ -102,6 +102,32 @@ async def create_session(user_data: UserLogin):
             "username": user_data.email.split("@")[0],
             "email": user_data.email,
         }
+
+
+# ---------------------------------------------------------------------------
+# POST /auth/forgot-password
+# ---------------------------------------------------------------------------
+@router.post("/forgot-password", status_code=200)
+async def forgot_password(body: PasswordResetRequest):
+    """Send a password-reset email via Firebase Auth (free, no SMTP config needed)."""
+    url = (
+        "https://identitytoolkit.googleapis.com/v1/"
+        f"accounts:sendOobCode?key={FIREBASE_WEB_API_KEY}"
+    )
+    payload = {"requestType": "PASSWORD_RESET", "email": body.email}
+
+    response = http_requests.post(url, json=payload, timeout=10)
+    data = response.json()
+
+    if "error" in data:
+        error_msg = data["error"].get("message", "")
+        # EMAIL_NOT_FOUND → still return 200 to avoid user enumeration
+        if error_msg == "EMAIL_NOT_FOUND":
+            return {"message": "If that email is registered, a reset link has been sent."}
+        logger.warning("Firebase forgot-password error: %s", error_msg)
+        raise HTTPException(status_code=400, detail="Failed to send reset email. Please try again.")
+
+    return {"message": "If that email is registered, a reset link has been sent."}
 
 
 # ---------------------------------------------------------------------------
